@@ -54,9 +54,10 @@ TEXT_FONT   = QFont("Courier", 10)
 camera_num  = 1                 # Default camera (first in list)
 image_queue = Queue.Queue()     # Queue to hold images
 capturing   = True              # Flag to indicate capturing
+mode = "continous"
 
 #define fcn to acquire img
-def acquire_images(cam, nodemap, nodemap_tldevice, queue):
+def acquire_images(cam, nodemap, nodemap_tldevice, queue, mode):
     print('*** IMAGE ACQUISITION ***\n')
     try:
         result = True
@@ -186,14 +187,15 @@ def acquire_images(cam, nodemap, nodemap_tldevice, queue):
                     # text_file.close
 
                     # different time acting on switch on/off
-                    i = i + 1
-                    diff_time = time.time() - start_time
-                    if (diff_time >= t0 and diff_time < t1):
-                        ser.write(some_bytes1)
-                    elif (diff_time >= t1 and diff_time < t2):
-                        ser.write(some_bytes2)
-                    elif (diff_time >= t2):
-                        camera_run = False
+                    if (mode != "continous"):
+                        i = i + 1
+                        diff_time = time.time() - start_time
+                        if (diff_time >= t0 and diff_time < t1):
+                            ser.write(some_bytes1)
+                        elif (diff_time >= t1 and diff_time < t2):
+                            ser.write(some_bytes2)
+                        elif (diff_time >= t2):
+                            camera_run = False
 
 
             except PySpin.SpinnakerException as ex:
@@ -266,7 +268,7 @@ def print_device_info(nodemap):
         return False
     return result
 
-def run_single_camera(cam, queue):
+def run_single_camera(cam, queue, mode):
     try:
         result = True
         # Retrieve TL device nodemap and print device information
@@ -277,7 +279,7 @@ def run_single_camera(cam, queue):
         # Retrieve GenICam nodemap
         nodemap = cam.GetNodeMap()
         # Acquire images
-        result &= acquire_images(cam, nodemap, nodemap_tldevice, queue)
+        result &= acquire_images(cam, nodemap, nodemap_tldevice, queue, mode)
         # Deinitialize camera
         cam.DeInit()
     except PySpin.SpinnakerException as ex:
@@ -285,7 +287,7 @@ def run_single_camera(cam, queue):
         result = False
     return result
 
-def camera_work(queue):
+def camera_work(queue, mode):
     result = True
 
     # Retrieve singleton reference to system object
@@ -320,7 +322,7 @@ def camera_work(queue):
 
         print('Running example for camera %d...' % i)
 
-        result &= run_single_camera(cam, queue)
+        result &= run_single_camera(cam, queue, mode)
         print('Camera %d example complete... \n' % i)
 
     # Release reference to camera
@@ -489,7 +491,7 @@ class MyWindow(QMainWindow):
                     self.show_image(image_queue, self.disp, DISP_SCALE))
         self.timer.start(DISP_MSEC)         
         self.capture_thread = threading.Thread(target=camera_work, 
-                    args=(image_queue,))
+                    args=(image_queue, mode))
         self.capture_thread.start()         # Thread to grab images
 
     # Fetch camera image from queue, and display it
