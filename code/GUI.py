@@ -23,7 +23,7 @@ hex_string2 = """A0 01 00 A1"""  #turn off str
 some_bytes2 = bytearray.fromhex(hex_string2)
 
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
-mode = "contious_stream"
+mode = "disconnect"   # set the initial mode to disconnect
 t0, t1, t2 = 1, 10, 20
 fps = 30
 N = t2*fps
@@ -342,12 +342,14 @@ class App(QMainWindow):
         # create the video capture 
         if (mode == "TimedStream"):
             self.thread = VideoThread_timed()
+            # connect its signal to the update_image slot
+            self.thread.change_pixmap_signal.connect(self.update_image)
+            # start the thread
+            self.thread.start()
         elif (mode == "contious_stream"):
             self.thread = VideoThread()
-        # connect its signal to the update_image slot
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        # start the thread
-        self.thread.start()
+            self.thread.change_pixmap_signal.connect(self.update_image)
+            self.thread.start()
 
     # Append to text display
     def append_text(self, text):
@@ -362,7 +364,7 @@ class App(QMainWindow):
         self.textbox.setTextCursor(cur)     # Update visible cursor
 
     def click_DAQ(self):
-        print('run clicked')
+        print('DAQ clicked')
         if (port_exist == False):
             print("USB not inserted, cannot go to timed version!")
         else:
@@ -376,9 +378,17 @@ class App(QMainWindow):
 
     def click_connect(self):
         print('connect clicked')
+        global mode
+        mode = "contious_stream"
+        self.thread = VideoThread()
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread.start()
 
     def click_disconnect(self):
         print('disconnect clicked')
+        global mode
+        mode = "disconnect"
+        self.thread.stop()
 
     def click_autofocus(self):
         print('autofocus clicked')
