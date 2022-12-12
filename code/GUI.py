@@ -58,7 +58,6 @@ class VideoThread(QThread):
 
     def run(self):
         system = PySpin.System.GetInstance()
-        print("Library version: ....")
         cam_list = system.GetCameras()
         if (cam_list.GetSize() == 0):
             cam_list.Clear()
@@ -194,6 +193,9 @@ class VideoThread_timed(QThread):
                 time.sleep(5)
                 start_time = time.time()
                 i = 0
+                global N, img_data_array
+                N = t2*fps
+                img_data_array = np.zeros((N,480,640))
 
                 while(self._run_flag):
                     try:
@@ -388,7 +390,7 @@ class App(QMainWindow):
         self.textbox.setTextCursor(cur)     # Update visible cursor
 
     def click_DAQ(self):
-        print('DAQ clicked')
+        print('-------------DAQ Clicked-------------')
         if (port_exist == False):
             print("USB not inserted, cannot go to timed version!")
         else:
@@ -401,7 +403,7 @@ class App(QMainWindow):
             self.thread.start()
 
     def click_connect(self):
-        print('connect clicked')
+        print('-------------Connect Clicked-------------')
         global mode
         mode = "contious_stream"
         self.thread.stop()
@@ -410,7 +412,7 @@ class App(QMainWindow):
         self.thread.start()
 
     def click_disconnect(self):
-        print('disconnect clicked')
+        print('-------------Disconnect Clicked-------------')
         global mode
         mode = "disconnect"
         self.thread.stop()
@@ -419,13 +421,13 @@ class App(QMainWindow):
         self.thread.start()
 
     def click_autofocus(self):
-        print('autofocus clicked')
+        print('-------------Autofocus Clicked-------------')
 
     def click_focusplus(self):
-        print('plus one focus')
+        print('-------------Plus One Focus-------------')
 
     def click_focusminus(self):
-        print('minus one focus')
+        print('-------------Minus One Focus-------------')
 
     def write(self, text):
         self.text_update.emit(str(text))
