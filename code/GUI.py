@@ -6,6 +6,7 @@ import cv2
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
 import os, PySpin, keyboard, time, base64, serial
+from PIL import Image, ImageDraw
 
 
 # switch initilization
@@ -28,6 +29,25 @@ t0, t1, t2 = 1, 10, 20
 fps = 30
 N = t2*fps
 img_data_array = np.zeros((N,480,640))
+
+class disconnect_thread(QThread):
+    change_pixmap_signal = pyqtSignal(np.ndarray)
+
+    def __init__(self):
+        super().__init__()
+        self._run_flag = True
+
+    def run(self):
+        image_data = Image.new('RGB', (130,100), color=(255,255,255))
+        draw = ImageDraw.Draw(image_data)
+        draw.text((20,20), "No Thread Found", fill=(0,0,0))
+        image_data = np.array(image_data)
+        self.change_pixmap_signal.emit(image_data)           
+
+    def stop(self):
+        """Sets run flag to False and waits for thread to finish"""
+        self._run_flag = False
+        self.wait()
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -350,6 +370,10 @@ class App(QMainWindow):
             self.thread = VideoThread()
             self.thread.change_pixmap_signal.connect(self.update_image)
             self.thread.start()
+        elif (mode == "disconnect"):
+            self.thread = disconnect_thread()
+            self.thread.change_pixmap_signal.connect(self.update_image)
+            self.thread.start()
 
     # Append to text display
     def append_text(self, text):
@@ -380,6 +404,7 @@ class App(QMainWindow):
         print('connect clicked')
         global mode
         mode = "contious_stream"
+        self.thread.stop()
         self.thread = VideoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
@@ -389,6 +414,9 @@ class App(QMainWindow):
         global mode
         mode = "disconnect"
         self.thread.stop()
+        self.thread = disconnect_thread()
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread.start()
 
     def click_autofocus(self):
         print('autofocus clicked')
