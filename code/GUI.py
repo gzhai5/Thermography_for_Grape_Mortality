@@ -1,5 +1,5 @@
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 import sys
 import cv2
@@ -29,6 +29,8 @@ t0, t1, t2 = 1, 10, 20
 fps = 30
 N = t2*fps
 img_data_array = np.zeros((N,480,640))
+Saved_Folder = "C:/Users/Alfoul/Desktop/Thermography_for_Grape_Mortality/code/SavedData/"
+save_file_name = "img_data.npy"
 
 class disconnect_thread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -215,10 +217,8 @@ class VideoThread_timed(QThread):
                             print("DAQ finished!")
 
                             # # save the image content array to a npy file
-                            # local_path = os.getcwd()
-                            # save_path = os.path.join(local_path, 'Output_Image_Array')
-                            # np.save(os.path.join(save_path, 'img_data.npy'),img_data_array)   
-                            # print("image contents saved")
+                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array)   
+                            print("------------Image Contents Saved------------")
 
                             i = N + 1
                         diff_time = time.time() - start_time
@@ -274,17 +274,17 @@ class App(QMainWindow):
         button_DAQ = QPushButton('DAQ', self)
         button_DAQ.clicked.connect(self.click_DAQ)
         button_DAQ.resize(80,40)
-        button_DAQ.move(880,180)
+        button_DAQ.move(880,220)
 
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
-        button_connect.move(680,180)
+        button_connect.move(680,220)
 
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,180)
+        button_disconnect.move(780,220)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
@@ -332,14 +332,20 @@ class App(QMainWindow):
             t2 = int(box_t2.text())
             print("You have set t2 to  " + str(t2) + "  !")
 
-        box_path = QLineEdit('Data Saving Path', self)
+        box_path = QLineEdit('Data Saving Name', self)
         box_path.setAlignment(QtCore.Qt.AlignCenter)
         box_path.resize(280,30)
-        box_path.move(680,120)
-        box_path.returnPressed.connect(lambda: save_path())
-        def save_path():
-            saving_path = box_path.text()
-            print(saving_path)
+        box_path.move(680,160)
+        box_path.returnPressed.connect(lambda: save_file())
+        def save_file():
+            global save_file_name
+            save_file_name = box_path.text() + ".npy"
+            print("You have choosen " + save_file_name + " as the saved npy filename")
+
+        button_path = QPushButton("Browse", self)
+        button_path.resize(280,30)
+        button_path.move(680,120)
+        button_path.clicked.connect(self.save_path)
 
         # create the main window
         self.vlayout = QVBoxLayout()        
@@ -388,6 +394,14 @@ class App(QMainWindow):
             if sep:                         # New line if LF
                 cur.insertBlock()
         self.textbox.setTextCursor(cur)     # Update visible cursor
+
+    def save_path(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
+        global Saved_Folder
+        Saved_Folder = directory
+        print("Choose Download Directory:  " +Saved_Folder)
 
     def click_DAQ(self):
         print('-------------DAQ Clicked-------------')
