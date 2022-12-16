@@ -1,18 +1,18 @@
 import numpy as np
-import cv2
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
-data = np.load("img_data.npy")
-cap = cv2.VideoCapture(data)
+def update_figure(i, data, ax):
+    ax.clear()
+    ax.imshow(data[i], cmap='gray')  # the cmap makes the video become greyscale instead of some yellow green color
+    return ax
 
-if not cap.isOpened():
-    print("Error opening video fiel!")
+data = np.load('./SavedData/img_data.npy')
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if ret:
-        cv2.imshow("Video", frame)
-        if cv2.waitKey(25) & 0xFF == ord("q"):
-            break
-    else:
-        break
-cap.realease()
+fig, ax = plt.subplots()
+fig.frameon = False
+fig.facecolor = 'none'
+fig.suptitle("Data File Replay")
+
+ani = animation.FuncAnimation(fig, update_figure, frames=range(data.shape[0]), fargs=(data, ax))
+plt.show()
