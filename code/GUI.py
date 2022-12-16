@@ -436,12 +436,31 @@ class App(QMainWindow):
 
     def click_autofocus(self):
         print('-------------Autofocus Clicked-------------')
+        system = PySpin.System.GetInstance()
+        camera = system.GetCameras()[0]
+        # camera.Init()
+        nodemap = camera.GetNodeMap()
+        node_autofocus = PySpin.CCommandPtr(nodemap.GetNode('AutoFocus'))
+        node_autofocus.Execute()
+        # camera.DeInit()
 
     def click_focusplus(self):
-        print('-------------Plus One Focus-------------')
+        print('-------------Plus 100 Focus-------------')
+        system = PySpin.System.GetInstance()
+        camera = system.GetCameras()[0]
+        nodemap = camera.GetNodeMap()
+        node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
+        focus_pos_curr = node_focus_pos.GetValue()
+        node_focus_pos.SetValue(focus_pos_curr+100)
 
     def click_focusminus(self):
-        print('-------------Minus One Focus-------------')
+        print('-------------Minus 100 Focus-------------')
+        system = PySpin.System.GetInstance()
+        camera = system.GetCameras()[0]
+        nodemap = camera.GetNodeMap()
+        node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
+        focus_pos_curr = node_focus_pos.GetValue()
+        node_focus_pos.SetValue(focus_pos_curr-100)
 
     def write(self, text):
         self.text_update.emit(str(text))
