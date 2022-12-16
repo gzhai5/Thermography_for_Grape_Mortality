@@ -1,5 +1,5 @@
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog, QComboBox, QListView
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 import sys
 import cv2
@@ -29,8 +29,14 @@ t0, t1, t2 = 1, 10, 20
 fps = 30
 N = t2*fps
 img_data_array = np.zeros((N,480,640))
+
+# set up the saving path and saved filename for the data
 Saved_Folder = "C:/Users/Alfoul/Desktop/Thermography_for_Grape_Mortality/code/SavedData/"
 save_file_name = "img_data.npy"
+
+# set up the focus step, 100 as a default
+focus_step = 100
+selected_text = "default"
 
 class disconnect_thread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -301,6 +307,24 @@ class App(QMainWindow):
         button_focusminus.resize(80,40)
         button_focusminus.move(880,280)
 
+        combo_box_autofocus_method = QComboBox(self)
+        options = ["Coarse", "Fine"]
+        combo_box_autofocus_method.addItems(options)
+        combo_box_autofocus_method.setCurrentIndex(0)
+        combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
+        combo_box_autofocus_method.resize(90,40)
+        combo_box_autofocus_method.move(720,350)
+
+        box_focus_step = QLineEdit('Focus Step', self)
+        box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
+        box_focus_step.resize(90,40)
+        box_focus_step.move(830,350)
+        box_focus_step.returnPressed.connect(lambda: save_focus_step())
+        def save_focus_step():
+            global focus_step
+            focus_step = int(box_focus_step.text())
+            print("You have set focus step to  " + str(focus_step) + "  !")
+
         # set boxes for typing in time, and the last one is for data saving_path
         box_t0 = QLineEdit('t0', self)
         box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
@@ -445,22 +469,40 @@ class App(QMainWindow):
         # camera.DeInit()
 
     def click_focusplus(self):
-        print('-------------Plus 100 Focus-------------')
+        print("-------------Plus " + focus_step + " Focus-------------")
         system = PySpin.System.GetInstance()
         camera = system.GetCameras()[0]
         nodemap = camera.GetNodeMap()
         node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
         focus_pos_curr = node_focus_pos.GetValue()
-        node_focus_pos.SetValue(focus_pos_curr+100)
+        node_focus_pos.SetValue(focus_pos_curr + focus_step)
 
     def click_focusminus(self):
-        print('-------------Minus 100 Focus-------------')
+        print('-------------Minus " + focus_step + " Focus-------------')
         system = PySpin.System.GetInstance()
         camera = system.GetCameras()[0]
         nodemap = camera.GetNodeMap()
         node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
         focus_pos_curr = node_focus_pos.GetValue()
-        node_focus_pos.SetValue(focus_pos_curr-100)
+        node_focus_pos.SetValue(focus_pos_curr - focus_step)
+
+    def autofocus_method(self, index):
+        if index == 0:
+            print("You have choose the autofoucs method as Coarse!")
+            system = PySpin.System.GetInstance()
+            camera = system.GetCameras()[0]
+            nodemap = camera.GetNodeMap()
+            node_autofocus_method = PySpin.CEnumerationPtr(nodemap.GetNode('AutoFocusMethod'))
+            node_autofocus_method_coarse = node_autofocus_method.GetEntryByName('Coarse')
+            node_autofocus_method.SetIntValue(node_autofocus_method_coarse.GetValue())
+        elif index == 1:
+            print("You have choose the autofoucs method as Fine!")
+            system = PySpin.System.GetInstance()
+            camera = system.GetCameras()[0]
+            nodemap = camera.GetNodeMap()
+            node_autofocus_method = PySpin.CEnumerationPtr(nodemap.GetNode('AutoFocusMethod'))
+            node_autofocus_method_fine = node_autofocus_method.GetEntryByName('Fine')
+            node_autofocus_method.SetIntValue(node_autofocus_method_fine.GetValue())
 
     def write(self, text):
         self.text_update.emit(str(text))
