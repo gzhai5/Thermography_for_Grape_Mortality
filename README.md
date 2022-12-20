@@ -25,28 +25,32 @@ The major softwares needed for this project is :
 
 * SpinView (A pre-developed Spinnaker Full SDK that can easily get access to the camera and used)
 * Python (edition 3.8, if using Windows OS, using Anaconda to have a good edition of python is strongly recomended)
-* Python Dependecies (will further discussed in the "Prerequisites" section).
+* Python Dependecies (will be further discussed in the "Prerequisites" section).
 
 ## Prerequisites
 
-List any dependencies or requirements that need to be installed before running the project.
+Below is the dependencies needed for running the GUI.py code:
 
-## Installing
+* PySpin (the installation of PySpin dependency is complicated if the installing environment is not the same envrionment for the offical website downloaded wheel, so users are strongly recommended to make the envrionment: python lower than 3.8; Windows OS, same Architecture. The detailed installation tutorial has been recorded in /reference/spinnaker_python-2.7.0.128-cp38-cp38-win_amd64/README.txt)
+* cv2
+* numpy, PIL, matplotlib
+* PyQt5
+* serial
 
-Step-by-step instructions on how to install the project and set it up.
+## File Explaination
 
-## Usage
+### GUI.py
 
-Instructions on how to use the project once it is set up.
+### run_data.py
+
+### unfinished (folder)
 
 ## Contributing
 
-Guidelines for how others can contribute to the project.
+* Prof. Yu Jiang
+* Graduate Student Guangxun Zhai
+* Graduate Student Lanyue Fang
 
-## License
+## Date Updated
 
-Include information about the license of your project, if applicable.
-
-## Acknowledgments
-
-Credit any external resources or individuals who have contributed to the project.
+12/20/2022
