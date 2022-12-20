@@ -1,0 +1,5 @@
+﻿  moc Viewer.h
+  Viewer.cpp
+  main.cpp
+  moc_Viewer.cpp
+  thermalView.vcxproj -> E:\Cornell\Thermography System\code\thermalView\x64\Debug\thermalView.exe
