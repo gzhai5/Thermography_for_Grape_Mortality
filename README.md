@@ -14,12 +14,11 @@ Our technology aims to mitigate the significant financial losses caused by mista
 
 * A Computer (Windows OS prefererred) with ethernet port
 
-<figure>
-  <img src="/readme_files/two_cables_needed_and_switching_power_supply.JPG" alt="ERROR" width="100" height="100">
+<figure style="text-align:center">
+  <img src="/readme_files/two_cables_needed_and_switching_power_supply.JPG" alt="ERROR" width="600" height="600">
   <figcaption>Figure 1: Left to Right: Ethernet Cable, Switching Power Supply, Cable between Switching Power Supply and Camera</figcaption>
 </figure>
 
-![ERROE](/readme_files/two_cables_needed_and_switching_power_supply.JPG)
 
 ## Prerequisites
 
