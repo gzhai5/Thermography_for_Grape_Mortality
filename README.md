@@ -14,6 +14,8 @@ Our technology aims to mitigate the significant financial losses caused by mista
 
 * A Computer (Windows OS prefererred) with ethernet port
 
+![ERROE](/readme_files/two_cables_needed_and_switching_power_supply.JPG)
+
 ## Prerequisites
 
 List any dependencies or requirements that need to be installed before running the project.
