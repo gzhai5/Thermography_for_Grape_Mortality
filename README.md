@@ -19,7 +19,13 @@ Our technology aims to mitigate the significant financial losses caused by mista
   <figcaption style="display:inline-block; font-size:24px; color:red">Figure 1: Left to Right: Ethernet Cable, Switching Power Supply, Cable between Switching Power Supply and Camera</figcaption>
 </figure>
 
+### Softwares Needed
 
+The major softwares needed for this project is :
+
+* SpinView (A pre-developed Spinnaker Full SDK that can easily get access to the camera and used)
+* Python (edition 3.8, if using Windows OS, using Anaconda to have a good edition of python is strongly recomended)
+* Python Dependecies (will further discussed in the "Prerequisites" section).
 
 ## Prerequisites
 
