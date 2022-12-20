@@ -4,7 +4,15 @@ Our technology aims to mitigate the significant financial losses caused by mista
 
 ## Getting Started
 
-Instructions on how to set up the project locally on your machine.
+### Hardwares Needed
+
+* Thermal Camera (FLIR a700)
+
+* Switching Power Supply
+
+* Two Cables (one is a ethernet cable; another is a white cable that is in the camera packaging box, one port is ethernet port, another is a data/power port to the camera)
+
+* A Computer (Windows OS prefererred) with ethernet port
 
 ## Prerequisites
 
