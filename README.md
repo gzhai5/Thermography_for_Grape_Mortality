@@ -27,11 +27,23 @@ The major softwares needed for this project is :
 * Python (edition 3.8, if using Windows OS, using Anaconda to have a good edition of python is strongly recomended)
 * Python Dependecies (will be further discussed in the "Prerequisites" section).
 
+## Hardware Connections
+
+<figure style="text-align:center">
+  <img src="/readme_files/switching_power_supply_connections.JPG" alt="ERROR">
+  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 2: Cable Connections on the Switching Power Supply<br>(be aware of the differnt IN/OUT ports)</figcaption>
+</figure>
+<br>
+<figure style="text-align:center">
+  <img src="/readme_files/camera_cable_connection.JPG" alt="ERROR">
+  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 3: Camera Port<br>(the cable should be connected to the ETH/PoE port, and when connecting camera successfully, two signal lights hould be on)</figcaption>
+</figure>
+
 ## Prerequisites
 
 Below is the dependencies needed for running the GUI.py code:
 
-* PySpin (the installation of PySpin dependency is complicated if the installing environment is not the same envrionment for the offical website downloaded wheel, so users are strongly recommended to make the envrionment: python lower than 3.8; Windows OS, same Architecture. The detailed installation tutorial has been recorded in /reference/spinnaker_python-2.7.0.128-cp38-cp38-win_amd64/README.txt)
+* PySpin (the installation of PySpin dependency is complicated if the installing environment is not the same envrionment for the offical website downloaded wheel, so users are strongly recommended to make the envrionment: python lower than 3.8; Windows OS, same Architecture. Mac OS and Linux OS have been tried before, but both of them have issues that needed to be figured out through google, and from my experience, it is much more conveninet to use Windows OS. The detailed installation tutorial has been recorded in /reference/spinnaker_python-2.7.0.128-cp38-cp38-win_amd64/README.txt)
 * cv2
 * numpy, PIL, matplotlib
 * PyQt5
