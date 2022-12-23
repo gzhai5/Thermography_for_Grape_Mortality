@@ -53,6 +53,18 @@ Below is the dependencies needed for running the GUI.py code:
 
 ### GUI.py
 
+This code is the major code for using the camera so far. It creates a simple GUI that have different threads for camera streaming, NULL thread, and Data
+Aquistion. The running of the code requires the successful connections to the thermal camera and the switch, otherwise it will have no image and error messages. The purpose of this code is to more easily control the usage of the thermal camera on a software coding base (here is Python) so as to make preparation of collecting the data for further CV/ML studies.
+
+* Camera Streaming Thread:<br>
+This part is called "VideoThread" in the python code class. Most of the code is referenced by the Example code from Spinnaker (/reference/spinnaker_python-2.7.0.128-cp38-cp38-win_amd64/Examples/Python3/Acquisition.py) and an open source (https://gist.github.com/docPhil99/ca4da12c9d6f29b9cea137b617c7b8b1). More specificly, it initilze the camera and get the image data (which is a nd numpy array), and emit each of it to the PyQt screen. The entering of this thread is realated to a PyQt button named "Connect". The "Connect" and "Cut" button will simply help the program determine whether to use this streaming thread or stop it.
+
+* NULL Thread:<br>
+This part is called "disconnect_thread" in the python code class. The code is instructed by ChatGPT. It is the same format of other threads. But the internal code is simple: Drawing a white background and print some texts on it. This image will be emitted to the PyQt screen always during this thread running. This thread is the default thread when starting the code, and could be access when hitting the "Cut" button.
+
+* Data Aquisition Thread:<br>
+This part is called "VideoThread_timed" in the python code class. The code writing is based on the streaming thread but making the streaming become a timed function with some other small features. The running time is controlled by the value of t2 (which has a default value, but can be changed from the PyQt screen). And during the running time, the switch will be controlled on and off according to the value of t0 and t1 (which has similiar settings as t2). Also, when finished this timed data aquisition process, the image data will be saved into a 3d numpy array and will be saved locally to .npy file. This file is important for the further analysis process, and has a big size since the image data has not been compressed. Some other features about the thread is the focus adjustment buttons. There are five main buttons linked with the camera focusing: Choose the focus method, auto focus, foucs plus, focus minus, and focus step. The logic for writing this focusing is get hinted by this online article (https://www.flir.com/support-center/iis/machine-vision/application-note/spinnaker-nodes/). This article states the way of writing code to locate a function which can be found in SpinView.
+
 ### run_data.py
 
 ### unfinished (folder)
