@@ -31,12 +31,12 @@ The major softwares needed for this project is :
 
 <figure style="text-align:center">
   <img src="/readme_files/switching_power_supply_connections.JPG" alt="ERROR">
-  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 2: Cable Connections on the Switching Power Supply<br>(be aware of the differnt IN/OUT ports)</figcaption>
+  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 2: Cable Connections on the Switching Power Supply<br>(be aware of the different IN/OUT ports)</figcaption>
 </figure>
 <br>
 <figure style="text-align:center">
   <img src="/readme_files/camera_cable_connection.JPG" alt="ERROR">
-  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 3: Camera Port<br>(the cable should be connected to the ETH/PoE port, and when connecting camera successfully, two signal lights hould be on)</figcaption>
+  <figcaption style="display:inline-block; font-size:24px; color:red">Figure 3: Camera Port<br>(the cable should be connected to the ETH/PoE port, and when connecting camera successfully, two signal lights should be on)</figcaption>
 </figure>
 
 ## Prerequisites
