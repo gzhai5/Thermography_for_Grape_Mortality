@@ -469,7 +469,7 @@ class App(QMainWindow):
         # camera.DeInit()
 
     def click_focusplus(self):
-        print("-------------Plus " + focus_step + " Focus-------------")
+        print("-------------Plus " + str(focus_step) + " Focus-------------")
         system = PySpin.System.GetInstance()
         camera = system.GetCameras()[0]
         nodemap = camera.GetNodeMap()
@@ -478,7 +478,7 @@ class App(QMainWindow):
         node_focus_pos.SetValue(focus_pos_curr + focus_step)
 
     def click_focusminus(self):
-        print('-------------Minus " + focus_step + " Focus-------------')
+        print("-------------Minus " + str(focus_step) + " Focus-------------")
         system = PySpin.System.GetInstance()
         camera = system.GetCameras()[0]
         nodemap = camera.GetNodeMap()
