@@ -10,7 +10,7 @@ class IRFormatType:
     LINEAR_100MK = 2
     RADIOMETRIC = 3
 
-duration = 360 # 1 hour
+duration = 1000 # 1 hour
 R_vec = []
 B_vec = []
 F_vec = []

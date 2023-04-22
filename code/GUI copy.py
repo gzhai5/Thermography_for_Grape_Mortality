@@ -3,20 +3,21 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-# import PySpin, serial
+import PySpin, serial
 import os, keyboard, time, base64, sys, cv2, re
 from PIL import Image, ImageDraw
+from skimage import img_as_ubyte
 
 
 # switch initilization
 port = 'COM3'
 port_exist = True
-# try:
-#     ser = serial.Serial(port, 9600, timeout=1)
-# except serial.serialutil.SerialException:
-#     print("USB port not Found")
-#     port_exist = False
-#     time.sleep(3)
+try:
+    ser = serial.Serial(port, 9600, timeout=1)
+except serial.serialutil.SerialException:
+    print("USB port not Found")
+    port_exist = False
+    time.sleep(3)
 hex_string1 = """A0 01 01 A2"""  #turn on str
 some_bytes1 = bytearray.fromhex(hex_string1)
 hex_string2 = """A0 01 00 A1"""  #turn off str
@@ -187,7 +188,7 @@ class VideoThread_timed(QThread):
             pixel_format_mono16 = node_pixel_format_mono16.GetValue()
             node_pixel_format.SetIntValue(pixel_format_mono16)
 
-            # handle different options of IRformattype
+            # # handle different options of IRformattype
             if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
                 # This section is to be activated only to set the streaming mode to TemperatureLinear10mK
                 node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
@@ -300,6 +301,14 @@ class VideoThread_timed(QThread):
 
                 # about to run
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
+                print('TRefl = ', TRefl)
+                print('Emiss = ', Emiss)
+                print('TAtm = ', TAtm)
+                print('TAtmC = ', TAtmC)
+                print('Humidity = ', Humidity)
+                print('Dist = ', Dist)
+                print('ExtOpticsTransmission = ', ExtOpticsTransmission)
+                print('ExtOpticsTemp = ', ExtOpticsTemp)
                 time.sleep(5)
                 start_time = time.time()
                 i = 0
@@ -314,7 +323,7 @@ class VideoThread_timed(QThread):
                             print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                    
                             image_data = image_result.GetNDArray()
-                            self.change_pixmap_signal.emit(image_data)
+                            # self.change_pixmap_signal.emit(image_data)
 
                             # depending on different irformattype
                             if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
@@ -324,7 +333,35 @@ class VideoThread_timed(QThread):
                             elif CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
                                 image_Radiance = (image_data - J0) / J1
                                 image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
+                           
+                        # uint8 26 232
+                        # uint16 8480 8845
+                        # float64 24.002885509567932 29.591223897995235
+                        # 26 = 24k+b, 232 = 29.59k+b   k = 36.85 b = 858.4
+                        # float64 63.08356151767316 237.51693158357386
 
+
+                            print(image_Temp.dtype,np.min(image_Temp),np.max(image_Temp))
+                            print(image_Temp.shape)
+                            # time.sleep(10)
+                            image_Temp = (image_Temp*36.85-858.4)
+                            # print("before round to uint8: ")
+                            # print(image_Temp.dtype,np.min(image_Temp),np.max(image_Temp))
+                            # image_Temp = image_Temp/65536*256
+                            # image_Temp = np.round(image_Temp).astype(np.uint8)
+                            # print("after round to uint8 and scaling: ")
+                            # print(image_Temp.dtype,np.min(image_Temp),np.max(image_Temp))
+                            # print("raw mono16 image data:")
+                            # print(image_data.dtype,np.min(image_data),np.max(image_data))
+                            # time.sleep(10)
+                            # image_data_bits = 8*sys.getsizeof(image_data)
+                            # image_Temp_bits = 8*sys.getsizeof(image_Temp)
+                            # print("data: " + str(image_data_bits))
+                            # print("temp: " + str(image_Temp_bits))
+                            # time.sleep(5)
+                            image_Temp = np.round(image_Temp).astype(np.uint8)
+                            self.change_pixmap_signal.emit(image_Temp)
+                            # self.change_pixmap_signal.emit((cv2.normalize(image_Temp, None, 0, 65535, cv2.NORM_MINMAX)).astype(np.uint16))
                         image_result.Release()
                         if (i < N):
                             img_data_array[i] = image_Temp
@@ -392,32 +429,32 @@ class App(QMainWindow):
         button_DAQ = QPushButton('DAQ', self)
         button_DAQ.clicked.connect(self.click_DAQ)
         button_DAQ.resize(80,40)
-        button_DAQ.move(880,130)
+        button_DAQ.move(880,160)
 
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
-        button_connect.move(680,130)
+        button_connect.move(680,160)
 
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,130)
+        button_disconnect.move(780,160)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
         button_autofocus.resize(80,40)
-        button_autofocus.move(680,180)
+        button_autofocus.move(680,210)
 
         button_focusplus = QPushButton('+', self)
         button_focusplus.clicked.connect(self.click_focusplus)
         button_focusplus.resize(80,40)
-        button_focusplus.move(780,180)
+        button_focusplus.move(780,210)
 
         button_focusminus = QPushButton('-', self)
         button_focusminus.clicked.connect(self.click_focusminus)
         button_focusminus.resize(80,40)
-        button_focusminus.move(880,180)
+        button_focusminus.move(880,210)
 
         combo_box_autofocus_method = QComboBox(self)
         options = ["Coarse", "Fine"]
@@ -425,12 +462,12 @@ class App(QMainWindow):
         combo_box_autofocus_method.setCurrentIndex(0)
         combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
         combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(720,370)
+        combo_box_autofocus_method.move(720,400)
 
         box_focus_step = QLineEdit('Focus Step', self)
         box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
         box_focus_step.resize(90,40)
-        box_focus_step.move(830,370)
+        box_focus_step.move(830,400)
         box_focus_step.returnPressed.connect(lambda: save_focus_step())
         def save_focus_step():
             if re.match("^\d+$", box_focus_step.text()):
@@ -444,7 +481,7 @@ class App(QMainWindow):
         box_t0 = QLineEdit('t0', self)
         box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
         box_t0.resize(80,30)
-        box_t0.move(680,10)
+        box_t0.move(680,40)
         box_t0.returnPressed.connect(lambda: save_t0())
         def save_t0():
             if re.match("^\d+$", box_t0.text()):
@@ -457,7 +494,7 @@ class App(QMainWindow):
         box_t1 = QLineEdit('t1', self)
         box_t1.setAlignment(QtCore.Qt.AlignCenter)
         box_t1.resize(80,30)
-        box_t1.move(780,10)
+        box_t1.move(780,40)
         box_t1.returnPressed.connect(lambda: save_t1())
         def save_t1():
             if re.match("^\d+$", box_t1.text()):
@@ -470,7 +507,7 @@ class App(QMainWindow):
         box_t2 = QLineEdit('t2', self)
         box_t2.setAlignment(QtCore.Qt.AlignCenter)
         box_t2.resize(80,30)
-        box_t2.move(880,10)
+        box_t2.move(880,40)
         box_t2.returnPressed.connect(lambda: save_t2())
         def save_t2():
             if re.match("^\d+$", box_t2.text()):
@@ -484,7 +521,7 @@ class App(QMainWindow):
         box_emiss = QLineEdit('Emiss', self)
         box_emiss.setAlignment(QtCore.Qt.AlignCenter)
         box_emiss.resize(70,30)
-        box_emiss.move(650,230)
+        box_emiss.move(685,260)
         box_emiss.returnPressed.connect(lambda: save_emiss())
         def save_emiss():
             if re.match("^\d+(\.\d+)?$", box_emiss.text()):
@@ -497,7 +534,7 @@ class App(QMainWindow):
         box_trefl = QLineEdit('TRefl', self)
         box_trefl.setAlignment(QtCore.Qt.AlignCenter)
         box_trefl.resize(70,30)
-        box_trefl.move(740,230)
+        box_trefl.move(785,260)
         box_trefl.returnPressed.connect(lambda: save_trefl())
         def save_trefl():
             if re.match("^\d+(\.\d+)?$", box_trefl.text()):
@@ -510,7 +547,7 @@ class App(QMainWindow):
         box_tatm = QLineEdit('TAtm', self)
         box_tatm.setAlignment(QtCore.Qt.AlignCenter)
         box_tatm.resize(70,30)
-        box_tatm.move(830,230)
+        box_tatm.move(885,260)
         box_tatm.returnPressed.connect(lambda: save_tatm())
         def save_tatm():
             if re.match("^\d+(\.\d+)?$", box_tatm.text()):
@@ -531,7 +568,7 @@ class App(QMainWindow):
         box_tatmc = QLineEdit('TAtmC', self)
         box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
         box_tatmc.resize(70,30)
-        box_tatmc.move(920,230)
+        box_tatmc.move(685,300)
         box_tatmc.returnPressed.connect(lambda: save_tatmc())
         def save_tatmc():
             if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
@@ -544,7 +581,7 @@ class App(QMainWindow):
         box_humidity = QLineEdit('Humidity', self)
         box_humidity.setAlignment(QtCore.Qt.AlignCenter)
         box_humidity.resize(70,30)
-        box_humidity.move(740,270)
+        box_humidity.move(785,300)
         box_humidity.returnPressed.connect(lambda: save_humidity())
         def save_humidity():
             if re.match("^\d+(\.\d+)?$", box_humidity.text()):
@@ -557,7 +594,7 @@ class App(QMainWindow):
         box_dist = QLineEdit('Dist', self)
         box_dist.setAlignment(QtCore.Qt.AlignCenter)
         box_dist.resize(70,30)
-        box_dist.move(830,270)
+        box_dist.move(885,300)
         box_dist.returnPressed.connect(lambda: save_dist())
         def save_dist():
             if re.match("^\d+(\.\d+)?$", box_dist.text()):
@@ -570,7 +607,7 @@ class App(QMainWindow):
         box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
         box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
         box_extOpticsTransmission.resize(150,30)
-        box_extOpticsTransmission.move(660,310)
+        box_extOpticsTransmission.move(660,340)
         box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
         def save_extOpticsTransmission():
             if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
@@ -583,7 +620,7 @@ class App(QMainWindow):
         box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
         box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
         box_extOpticsTemp.resize(150,30)
-        box_extOpticsTemp.move(830,310)
+        box_extOpticsTemp.move(830,340)
         box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
         def save_extOpticsTemp():
             if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
@@ -597,7 +634,7 @@ class App(QMainWindow):
         box_path = QLineEdit('Data Saving Name', self)
         box_path.setAlignment(QtCore.Qt.AlignCenter)
         box_path.resize(280,30)
-        box_path.move(680,90)
+        box_path.move(680,120)
         box_path.returnPressed.connect(lambda: save_file())
         def save_file():
             global save_file_name
@@ -606,7 +643,7 @@ class App(QMainWindow):
 
         button_path = QPushButton("Browse", self)
         button_path.resize(280,30)
-        button_path.move(680,50)
+        button_path.move(680,80)
         button_path.clicked.connect(self.save_path)
 
         # create the main window
@@ -762,12 +799,22 @@ class App(QMainWindow):
     
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        if len(cv_img.shape) == 2:
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data,cv_img.shape[1],cv_img.shape[0],0,QtGui.QImage.Format_RGB888)
+        else:
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
+        # rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        # h, w, ch = rgb_image.shape
+        # bytes_per_line = ch * w
+        # convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        # p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
+        # return QPixmap.fromImage(p)
     
 if __name__=="__main__":
     app = QApplication(sys.argv)
