@@ -1,12 +1,12 @@
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog, QComboBox, QListView
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
-import sys
-import cv2
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-import os, PySpin, keyboard, time, base64, serial
+import PySpin, serial
+import os, keyboard, time, base64, sys, cv2, re
 from PIL import Image, ImageDraw
+from skimage import img_as_ubyte
 
 
 # switch initilization
@@ -37,6 +37,24 @@ save_file_name = "img_data.npy"
 # set up the focus step, 100 as a default
 focus_step = 100
 selected_text = "default"
+
+# set up the IRformat class, and set the default irformat = radiometric
+class IRFormatType:
+    LINEAR_10MK = 1
+    LINEAR_100MK = 2
+    RADIOMETRIC = 3
+CHOSEN_IR_TYPE = IRFormatType.RADIOMETRIC
+pixel_format = "Mono16"
+
+# set up object parameters, it could be changed in GUI
+Emiss = 0.97
+TRefl = 293.15
+TAtm = 293.15
+TAtmC = TAtm - 273.15
+Humidity = 0.55
+Dist = 2
+ExtOpticsTransmission = 1
+ExtOpticsTemp = TAtm
 
 class disconnect_thread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -79,6 +97,11 @@ class VideoThread(QThread):
             global _run_flag
             sNodemap = cam.GetTLStreamNodeMap()
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
+            # ensure the pixel format = mono8 for streaming
+            node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
+            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono8'))
+            node_pixel_format_mono8 = node_pixel_format_mono8.GetValue()
+            node_pixel_format.SetIntValue(node_pixel_format_mono8)
             if not PySpin.IsAvailable(node_bufferhandling_mode) or not PySpin.IsWritable(node_bufferhandling_mode):
                 print('Unable to set stream buffer handling mode.. Aborting...')
                 break
@@ -164,6 +187,33 @@ class VideoThread_timed(QThread):
             global _run_flag
             sNodemap = cam.GetTLStreamNodeMap()
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
+
+            # ensure the pixel format = mono16
+            node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
+            node_pixel_format_mono16 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName(pixel_format))
+            pixel_format_mono16 = node_pixel_format_mono16.GetValue()
+            node_pixel_format.SetIntValue(pixel_format_mono16)
+
+            # # handle different options of IRformattype
+            if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
+                # This section is to be activated only to set the streaming mode to TemperatureLinear10mK
+                node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
+                node_temp_linear_high = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('TemperatureLinear10mK'))
+                node_temp_high = node_temp_linear_high.GetValue()
+                node_IRFormat.SetIntValue(node_temp_high)
+            elif CHOSEN_IR_TYPE == IRFormatType.LINEAR_100MK:
+                # This section is to be activated only to set the streaming mode to TemperatureLinear100mK
+                node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
+                node_temp_linear_low = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('TemperatureLinear100mK'))
+                node_temp_low = node_temp_linear_low.GetValue()
+                node_IRFormat.SetIntValue(node_temp_low)
+            elif CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
+                # This section is to be activated only to set the streaming mode to Radiometric
+                node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
+                node_temp_radiometric = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('Radiometric'))
+                node_radiometric = node_temp_radiometric.GetValue()
+                node_IRFormat.SetIntValue(node_radiometric)
+
             if not PySpin.IsAvailable(node_bufferhandling_mode) or not PySpin.IsWritable(node_bufferhandling_mode):
                 print('Unable to set stream buffer handling mode.. Aborting...')
                 break
@@ -197,7 +247,74 @@ class VideoThread_timed(QThread):
                     device_serial_number = node_device_serial_number.GetValue()
                     print('Device serial number retrieved as %s...' % device_serial_number)
 
+                # Retrieve Calibration details
+                CalibrationQueryR_node = PySpin.CFloatPtr(nodemap.GetNode('R'))
+                R = CalibrationQueryR_node.GetValue()
+                print('R =', R)
+
+                CalibrationQueryB_node = PySpin.CFloatPtr(nodemap.GetNode('B'))
+                B = CalibrationQueryB_node.GetValue()
+                print('B =', B)
+
+                CalibrationQueryF_node = PySpin.CFloatPtr(nodemap.GetNode('F'))
+                F = CalibrationQueryF_node.GetValue()
+                print('F =', F)
+
+                CalibrationQueryX_node = PySpin.CFloatPtr(nodemap.GetNode('X'))
+                X = CalibrationQueryX_node.GetValue()
+                print('X =', X)
+
+                CalibrationQueryA1_node = PySpin.CFloatPtr(nodemap.GetNode('alpha1'))
+                A1 = CalibrationQueryA1_node.GetValue()
+                print('alpha1 =', A1)
+
+                CalibrationQueryA2_node = PySpin.CFloatPtr(nodemap.GetNode('alpha2'))
+                A2 = CalibrationQueryA2_node.GetValue()
+                print('alpha2 =', A2)
+
+                CalibrationQueryB1_node = PySpin.CFloatPtr(nodemap.GetNode('beta1'))
+                B1 = CalibrationQueryB1_node.GetValue()
+                print('beta1 =', B1)
+
+                CalibrationQueryB2_node = PySpin.CFloatPtr(nodemap.GetNode('beta2'))
+                B2 = CalibrationQueryB2_node.GetValue()
+                print('beta2 =', B2)
+
+                CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
+                J1 = CalibrationQueryJ1_node.GetValue()
+                print('Gain =', J1)
+
+                CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
+                J0 = CalibrationQueryJ0_node.GetValue()
+                print('Offset =', J0)
+
+                if CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
+                    H2O = Humidity * np.exp(1.5587 + 0.06939 * TAtmC - 0.00027816 * TAtmC * TAtmC + 0.00000068455 * TAtmC * TAtmC * TAtmC)
+                    print('H20 =', H2O)
+                    Tau = X * np.exp(-np.sqrt(Dist) * (A1 + B1 * np.sqrt(H2O))) + (1 - X) * np.exp(-np.sqrt(Dist) * (A2 + B2 * np.sqrt(H2O)))
+                    print('tau =', Tau)
+                    # Pseudo radiance of the reflected environment
+                    r1 = ((1 - Emiss) / Emiss) * (R / (np.exp(B / TRefl) - F))
+                    print('r1 =', r1)
+                    # Pseudo radiance of the atmosphere
+                    r2 = ((1 - Tau) / (Emiss * Tau)) * (R / (np.exp(B / TAtm) - F))
+                    print('r2 =', r2)
+                    # Pseudo radiance of the external optics
+                    r3 = ((1 - ExtOpticsTransmission) / (Emiss * Tau * ExtOpticsTransmission)) * (R / (np.exp(B / ExtOpticsTemp) - F))
+                    print('r3 =', r3)
+                    K2 = r1 + r2 + r3
+                    print('K2 =', K2)
+
+                # about to run
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
+                print('TRefl = ', TRefl)
+                print('Emiss = ', Emiss)
+                print('TAtm = ', TAtm)
+                print('TAtmC = ', TAtmC)
+                print('Humidity = ', Humidity)
+                print('Dist = ', Dist)
+                print('ExtOpticsTransmission = ', ExtOpticsTransmission)
+                print('ExtOpticsTemp = ', ExtOpticsTemp)
                 time.sleep(5)
                 start_time = time.time()
                 i = 0
@@ -210,12 +327,34 @@ class VideoThread_timed(QThread):
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
                             print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
-                        else:                    
+                        else:                   
                             image_data = image_result.GetNDArray()
-                            self.change_pixmap_signal.emit(image_data)                      
+                            # self.change_pixmap_signal.emit(image_data)
+
+                            # depending on different irformattype
+                            if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
+                                image_Temp_Celsius_high = (image_data * 0.01) - 273.15
+                            elif CHOSEN_IR_TYPE == IRFormatType.LINEAR_100MK:
+                                image_Temp_Celsius_low = (image_data * 0.1) - 273.15
+                            elif CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
+                                image_Radiance = (image_data - J0) / J1
+                                image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
+
+                            # TODO: 
+                            # Issue: if pixel format is mono16, then we will receive the image_data in uint16 and after the calculation,
+                            # the image_Temp would be float64, this format needs to be rounded to be pass through cv2, and also cannot be viewed
+                            # Solution: we record the estimate range for pixel value that could be view in mono8 is from [26,232],
+                            # and the pixel value for image_data in mono16 is [8409,9246],
+                            # We used a linear conversion and get k = 0.24612,b=-2043.6. With this conversion, we could view the video somehow
+                            # Another soln might be changing cv2 package into matlab package
+                            # print(image_data.dtype,np.min(image_data),np.max(image_data))
+
+                            image_Temp_conv = (image_data*0.24612-2043.6)*1.4
+                            image_Temp_conv = np.round(image_Temp_conv).astype(np.uint8)
+                            self.change_pixmap_signal.emit(image_Temp_conv)
                         image_result.Release()
                         if (i < N):
-                            img_data_array[i] = image_data
+                            img_data_array[i] = image_Temp
                             print("Now, You have passed  " + str(i) + "  images!")
                             i = i + 1
                         if (i == N):
@@ -280,32 +419,32 @@ class App(QMainWindow):
         button_DAQ = QPushButton('DAQ', self)
         button_DAQ.clicked.connect(self.click_DAQ)
         button_DAQ.resize(80,40)
-        button_DAQ.move(880,220)
+        button_DAQ.move(880,160)
 
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
-        button_connect.move(680,220)
+        button_connect.move(680,160)
 
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,220)
+        button_disconnect.move(780,160)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
         button_autofocus.resize(80,40)
-        button_autofocus.move(680,280)
+        button_autofocus.move(680,210)
 
         button_focusplus = QPushButton('+', self)
         button_focusplus.clicked.connect(self.click_focusplus)
         button_focusplus.resize(80,40)
-        button_focusplus.move(780,280)
+        button_focusplus.move(780,210)
 
         button_focusminus = QPushButton('-', self)
         button_focusminus.clicked.connect(self.click_focusminus)
         button_focusminus.resize(80,40)
-        button_focusminus.move(880,280)
+        button_focusminus.move(880,210)
 
         combo_box_autofocus_method = QComboBox(self)
         options = ["Coarse", "Fine"]
@@ -313,53 +452,195 @@ class App(QMainWindow):
         combo_box_autofocus_method.setCurrentIndex(0)
         combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
         combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(720,350)
+        combo_box_autofocus_method.move(680,380)
+
+        # combo_box_pixelformat_method = QComboBox(self)
+        # options_pf = ["Mono8", "Mono16"]
+        # combo_box_pixelformat_method.addItems(options_pf)
+        # combo_box_pixelformat_method.setCurrentIndex(0)
+        # combo_box_pixelformat_method.currentIndexChanged.connect(lambda: imageformat_method)
+        # combo_box_pixelformat_method.resize(90,40)
+        # combo_box_pixelformat_method.move(780,380)
+        # def imageformat_method(self, index):
+        #     global pixel_format
+        #     if index == 0:
+        #         pixel_format = "Mono8"
+        #         print("You have choose the image format as Mono8!")
+        #     elif index == 1:
+        #         pixel_format = "Mono16"
+        #         print("You have choose the image format as Mono16!")
 
         box_focus_step = QLineEdit('Focus Step', self)
         box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
         box_focus_step.resize(90,40)
-        box_focus_step.move(830,350)
+        box_focus_step.move(880,380)
         box_focus_step.returnPressed.connect(lambda: save_focus_step())
         def save_focus_step():
-            global focus_step
-            focus_step = int(box_focus_step.text())
-            print("You have set focus step to  " + str(focus_step) + "  !")
+            if re.match("^\d+$", box_focus_step.text()):
+                global focus_step
+                focus_step = int(box_focus_step.text())
+                print("You have set focus step to  " + str(focus_step) + "  !")
+            else:
+                print("wrong input! Want int")
 
         # set boxes for typing in time, and the last one is for data saving_path
         box_t0 = QLineEdit('t0', self)
         box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
         box_t0.resize(80,30)
-        box_t0.move(680,50)
+        box_t0.move(680,40)
         box_t0.returnPressed.connect(lambda: save_t0())
         def save_t0():
-            global t0
-            t0 = int(box_t0.text())
-            print("You have set t0 to  " + str(t0) + "  !")
+            if re.match("^\d+$", box_t0.text()):
+                global t0
+                t0 = int(box_t0.text())
+                print("You have set t0 to  " + str(t0) + "  !")
+            else:
+                print("wrong input! Want int")
 
         box_t1 = QLineEdit('t1', self)
         box_t1.setAlignment(QtCore.Qt.AlignCenter)
         box_t1.resize(80,30)
-        box_t1.move(780,50)
+        box_t1.move(780,40)
         box_t1.returnPressed.connect(lambda: save_t1())
         def save_t1():
-            global t1
-            t1 = int(box_t1.text())
-            print("You have set t1 to  " + str(t1) + "  !")
+            if re.match("^\d+$", box_t1.text()):
+                global t1
+                t1 = int(box_t1.text())
+                print("You have set t1 to  " + str(t1) + "  !")
+            else:
+                print("wrong input! Want int")
 
         box_t2 = QLineEdit('t2', self)
         box_t2.setAlignment(QtCore.Qt.AlignCenter)
         box_t2.resize(80,30)
-        box_t2.move(880,50)
+        box_t2.move(880,40)
         box_t2.returnPressed.connect(lambda: save_t2())
         def save_t2():
-            global t2
-            t2 = int(box_t2.text())
-            print("You have set t2 to  " + str(t2) + "  !")
+            if re.match("^\d+$", box_t2.text()):
+                global t2
+                t2 = int(box_t2.text())
+                print("You have set t2 to  " + str(t2) + "  !")
+            else:
+                print("wrong input! Want int")
 
+        # create boxs for saving object parameters
+        box_emiss = QLineEdit('Emiss', self)
+        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
+        box_emiss.resize(70,30)
+        box_emiss.move(685,260)
+        box_emiss.returnPressed.connect(lambda: save_emiss())
+        def save_emiss():
+            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
+                global Emiss
+                Emiss = float(box_emiss.text())
+                print("You have set Emiss to  " + str(Emiss) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_trefl = QLineEdit('TRefl', self)
+        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
+        box_trefl.resize(70,30)
+        box_trefl.move(785,260)
+        box_trefl.returnPressed.connect(lambda: save_trefl())
+        def save_trefl():
+            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
+                global TRefl
+                TRefl = float(box_trefl.text())
+                print("You have set TRefl to  " + str(TRefl) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_tatm = QLineEdit('TAtm', self)
+        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatm.resize(70,30)
+        box_tatm.move(885,260)
+        box_tatm.returnPressed.connect(lambda: save_tatm())
+        def save_tatm():
+            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
+                global TAtm
+                TAtm = float(box_tatm.text())
+                print("You have set TAtm to  " + str(TAtm) + "  !")
+                global TAtmC
+                TAtmC = TAtm - 273.15
+                print("You have also set TAtm to  " + str(TAtmC) + "  !")
+                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
+                global ExtOpticsTemp
+                ExtOpticsTemp = TAtm
+                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
+            else:
+                print("wrong input! Want float")
+
+        box_tatmc = QLineEdit('TAtmC', self)
+        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatmc.resize(70,30)
+        box_tatmc.move(685,300)
+        box_tatmc.returnPressed.connect(lambda: save_tatmc())
+        def save_tatmc():
+            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
+                global TAtmC
+                TAtmC = float(box_tatmc.text())
+                print("You have set TAtmC to  " + str(TAtmC) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_humidity = QLineEdit('Humidity', self)
+        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
+        box_humidity.resize(70,30)
+        box_humidity.move(785,300)
+        box_humidity.returnPressed.connect(lambda: save_humidity())
+        def save_humidity():
+            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
+                global Humidity
+                Humidity = float(box_humidity.text())
+                print("You have set Humidity to  " + str(Humidity) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_dist = QLineEdit('Dist', self)
+        box_dist.setAlignment(QtCore.Qt.AlignCenter)
+        box_dist.resize(70,30)
+        box_dist.move(885,300)
+        box_dist.returnPressed.connect(lambda: save_dist())
+        def save_dist():
+            if re.match("^\d+(\.\d+)?$", box_dist.text()):
+                global Dist
+                Dist = float(box_dist.text())
+                print("You have set Dist to  " + str(Dist) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
+        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTransmission.resize(150,30)
+        box_extOpticsTransmission.move(660,340)
+        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
+        def save_extOpticsTransmission():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
+                global ExtOpticsTransmission
+                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
+                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
+        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTemp.resize(150,30)
+        box_extOpticsTemp.move(830,340)
+        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
+        def save_extOpticsTemp():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
+                global ExtOpticsTemp
+                ExtOpticsTemp = float(box_extOpticsTemp.text())
+                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+            else:
+                print("wrong input! Want float")            
+
+        # for the data saving path and also saved filename
         box_path = QLineEdit('Data Saving Name', self)
         box_path.setAlignment(QtCore.Qt.AlignCenter)
         box_path.resize(280,30)
-        box_path.move(680,160)
+        box_path.move(680,120)
         box_path.returnPressed.connect(lambda: save_file())
         def save_file():
             global save_file_name
@@ -368,7 +649,7 @@ class App(QMainWindow):
 
         button_path = QPushButton("Browse", self)
         button_path.resize(280,30)
-        button_path.move(680,120)
+        button_path.move(680,80)
         button_path.clicked.connect(self.save_path)
 
         # create the main window
@@ -524,12 +805,22 @@ class App(QMainWindow):
     
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        if len(cv_img.shape) == 2:
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data,cv_img.shape[1],cv_img.shape[0],0,QtGui.QImage.Format_RGB888)
+        else:
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
+        # rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        # h, w, ch = rgb_image.shape
+        # bytes_per_line = ch * w
+        # convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        # p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
+        # return QPixmap.fromImage(p)
     
 if __name__=="__main__":
     app = QApplication(sys.argv)
