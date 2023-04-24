@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
 import PySpin, serial
-import os, keyboard, time, base64, sys, cv2, re
+import os, keyboard, time, base64, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
 from skimage import img_as_ubyte
 
@@ -139,7 +139,8 @@ class VideoThread(QThread):
                     try:
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
-                            print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
+                            print("")
+                            # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                    
                             image_data = image_result.GetNDArray()
                             self.change_pixmap_signal.emit(image_data)                       
@@ -307,15 +308,24 @@ class VideoThread_timed(QThread):
 
                 # about to run
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
-                print('TRefl = ', TRefl)
-                print('Emiss = ', Emiss)
-                print('TAtm = ', TAtm)
-                print('TAtmC = ', TAtmC)
-                print('Humidity = ', Humidity)
-                print('Dist = ', Dist)
-                print('ExtOpticsTransmission = ', ExtOpticsTransmission)
-                print('ExtOpticsTemp = ', ExtOpticsTemp)
-                time.sleep(5)
+
+                # save down parameters in .cfg in the same directory of where image data saved
+                config = configparser.ConfigParser()
+                config['PARAMETERS'] = {'TRefl': str(TRefl),
+                                        'Emiss': str(Emiss),
+                                        'TAtm': str(TAtm),
+                                        'TAtmC': str(TAtmC),
+                                        'Humidity': str(Humidity),
+                                        'Dist': str(Dist),
+                                        'ExtOpticsTransmission': str(ExtOpticsTransmission),
+                                        'ExtOpticsTemp': str(ExtOpticsTemp)}
+                save_param_name = os.path.splitext(save_file_name)[0] + ".cfg"
+                with open (os.path.join(Saved_Folder, save_param_name),'w') as configfile:
+                    config.write(configfile)
+                print("Parameter Saved")
+                time.sleep(1)
+
+                # record start time, construct image_data_array
                 start_time = time.time()
                 i = 0
                 global N, img_data_array
@@ -326,10 +336,10 @@ class VideoThread_timed(QThread):
                     try:
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
-                            print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
+                            print("")
+                            # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                   
                             image_data = image_result.GetNDArray()
-                            # self.change_pixmap_signal.emit(image_data)
 
                             # depending on different irformattype
                             if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
@@ -349,9 +359,15 @@ class VideoThread_timed(QThread):
                             # Another soln might be changing cv2 package into matlab package
                             # print(image_data.dtype,np.min(image_data),np.max(image_data))
 
-                            image_Temp_conv = (image_data*0.24612-2043.6)*1.4
-                            image_Temp_conv = np.round(image_Temp_conv).astype(np.uint8)
-                            self.change_pixmap_signal.emit(image_Temp_conv)
+                            # image_Temp_conv = (image_data*0.24612-2043.6)*1.4
+                            # image_Temp_conv = np.round(image_Temp_conv).astype(np.uint8)
+                            # self.change_pixmap_signal.emit(image_Temp_conv)
+
+                            # image_data_norm = cv2.normalize(image_data,image_data,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
+                            image_Temp_norm = cv2.normalize(image_Temp,image_Temp,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
+                            self.change_pixmap_signal.emit(image_Temp_norm)
+
+
                         image_result.Release()
                         if (i < N):
                             img_data_array[i] = image_Temp
@@ -362,7 +378,7 @@ class VideoThread_timed(QThread):
                             print("DAQ finished!")
 
                             # # save the image content array to a npy file
-                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array)   
+                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array.astype(np.uint16))   
                             print("------------Image Contents Saved------------")
 
                             i = N + 1
