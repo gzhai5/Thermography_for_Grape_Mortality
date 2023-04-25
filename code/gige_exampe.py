@@ -270,7 +270,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                         # and then calculating the temperature array (degrees Celsius) with the full thermography formula
                         image_Radiance = (image_data - J0) / J1
                         image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
-                        print(image_Temp.dtype,np.min(image_Temp),np.max(image_Temp))
+                        # print(image_Temp.dtype,np.min(image_Temp),np.max(image_Temp))
                         # Displaying an image of temperature (degrees Celsius) when streaming mode is set to Radiometric
                         plt.imshow(image_Temp, cmap='inferno', aspect='auto')
                         plt.colorbar(format='%.2f')

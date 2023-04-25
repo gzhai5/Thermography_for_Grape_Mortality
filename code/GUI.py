@@ -371,14 +371,14 @@ class VideoThread_timed(QThread):
                         image_result.Release()
                         if (i < N):
                             img_data_array[i] = image_Temp
-                            print("Now, You have passed  " + str(i) + "  images!")
+                            # print("Now, You have passed  " + str(i) + "  images!")
                             i = i + 1
                         if (i == N):
                             print("Now, You have passed  " + str(i) + "  images!")
                             print("DAQ finished!")
 
                             # # save the image content array to a npy file
-                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array.astype(np.uint16))   
+                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array)   
                             print("------------Image Contents Saved------------")
 
                             i = N + 1

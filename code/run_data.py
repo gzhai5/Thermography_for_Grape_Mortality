@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sys
+from IPython.display import HTML
 
-def update_figure(i, data, ax):
+def update_frame(frame_num, data, ax):
     ax.clear()
-    ax.imshow(data[i], cmap='gray')  # the cmap makes the video become greyscale instead of some yellow green color
+    ax.imshow(data[frame_num], cmap='inferno', aspect='auto')
     return ax
 
 filename = "none"
@@ -18,10 +19,10 @@ elif (len(sys.argv) == 2):
     print("-----Going to Play the file: " + filename)
     data = np.load(filename)
 
-    fig, ax = plt.subplots()
+    fig,ax = plt.subplots()
     fig.frameon = False
     fig.facecolor = 'none'
-    fig.suptitle("Data File Replay")
+    fig.suptitle("Data Video Replay")
 
-    ani = animation.FuncAnimation(fig, update_figure, frames=range(data.shape[0]), fargs=(data, ax))
+    ani = animation.FuncAnimation(fig, update_frame, frames=range(data.shape[0]), interval=50, fargs=(data,ax))
     plt.show()
