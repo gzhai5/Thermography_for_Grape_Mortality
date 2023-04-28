@@ -51,9 +51,9 @@ order_dict = {
 }
 
 # load data
-data_filepath = 'path/to/your/file.npy'
+data_filepath = './SavedData/heatcool.npy'
 ti_cube = np.load(data_filepath)
-disp_frame = np.squeeze(ti_cube[0,:,:])
+disp_frame = np.squeeze(ti_cube[100,:,:])
 
 # select pixels for thermal curve extraction
 num_selected_points = 10
