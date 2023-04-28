@@ -99,9 +99,25 @@ class VideoThread(QThread):
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
             # ensure the pixel format = mono8 for streaming
             node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
-            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono8'))
+            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
             node_pixel_format_mono8 = node_pixel_format_mono8.GetValue()
             node_pixel_format.SetIntValue(node_pixel_format_mono8)
+
+            CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
+            J1 = CalibrationQueryJ1_node.GetValue()
+            # print('Gain =', J1)
+
+            CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
+            J0 = CalibrationQueryJ0_node.GetValue()
+            # print('Offset =', J0)
+
+            # test ir format settings
+            node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
+            node_temp_radiometric = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('Radiometric'))
+            node_radiometric = node_temp_radiometric.GetValue()
+            node_IRFormat.SetIntValue(node_radiometric)
+
+
             if not PySpin.IsAvailable(node_bufferhandling_mode) or not PySpin.IsWritable(node_bufferhandling_mode):
                 print('Unable to set stream buffer handling mode.. Aborting...')
                 break
@@ -143,7 +159,10 @@ class VideoThread(QThread):
                             # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                    
                             image_data = image_result.GetNDArray()
-                            self.change_pixmap_signal.emit(image_data)                       
+                            image_data_d = image_data
+                            image_data_dt = image_data_d
+                            image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
+                            self.change_pixmap_signal.emit(image_data_dt)                       
                         image_result.Release()
 
                     except PySpin.SpinnakerException as ex:
@@ -364,13 +383,13 @@ class VideoThread_timed(QThread):
                             # self.change_pixmap_signal.emit(image_Temp_conv)
 
                             # image_data_norm = cv2.normalize(image_data,image_data,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
-                            image_Temp_norm = cv2.normalize(image_Temp,image_Temp,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
+                            image_Temp_norm = cv2.normalize(image_Radiance,image_Radiance,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
                             self.change_pixmap_signal.emit(image_Temp_norm)
 
 
                         image_result.Release()
                         if (i < N):
-                            img_data_array[i] = image_Temp
+                            img_data_array[i] = image_data
                             # print("Now, You have passed  " + str(i) + "  images!")
                             i = i + 1
                         if (i == N):
