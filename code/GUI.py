@@ -3,25 +3,34 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-import PySpin, serial
+import PySpin, serial, pyfirmata
 import os, keyboard, time, base64, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
 from skimage import img_as_ubyte
 
 
 # switch initilization
-port = 'COM3'
+# port = 'COM3'
+# port_exist = True
+# try:
+#     ser = serial.Serial(port, 9600, timeout=1)
+# except serial.serialutil.SerialException:
+#     print("USB port not Found")
+#     port_exist = False
+#     time.sleep(3)
+# hex_string1 = """A0 01 01 A2"""  #turn on str
+# some_bytes1 = bytearray.fromhex(hex_string1)
+# hex_string2 = """A0 01 00 A1"""  #turn off str
+# some_bytes2 = bytearray.fromhex(hex_string2)
+port = 'COM4'
+relay_pin = 12
 port_exist = True
 try:
-    ser = serial.Serial(port, 9600, timeout=1)
-except serial.serialutil.SerialException:
+    board = pyfirmata.Arduino('COM4')
+except IOError:
     print("USB port not Found")
     port_exist = False
     time.sleep(3)
-hex_string1 = """A0 01 01 A2"""  #turn on str
-some_bytes1 = bytearray.fromhex(hex_string1)
-hex_string2 = """A0 01 00 A1"""  #turn off str
-some_bytes2 = bytearray.fromhex(hex_string2)
 
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
@@ -403,9 +412,11 @@ class VideoThread_timed(QThread):
                             i = N + 1
                         diff_time = time.time() - start_time
                         if (diff_time >= t0 and diff_time < t1):
-                            ser.write(some_bytes1)
+                            # ser.write(some_bytes1)
+                             board.digital[relay_pin].write(1)
                         elif (diff_time >= t1 and diff_time < t2):
-                            ser.write(some_bytes2)
+                            # ser.write(some_bytes2)
+                             board.digital[relay_pin].write(0)
 
                     except PySpin.SpinnakerException as ex:
                         print('Error: %s' % ex)
