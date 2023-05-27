@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-import PySpin, serial, pyfirmata
+# import PySpin, serial, pyfirmata
 import os, keyboard, time, base64, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
 from skimage import img_as_ubyte
@@ -22,15 +22,15 @@ from skimage import img_as_ubyte
 # some_bytes1 = bytearray.fromhex(hex_string1)
 # hex_string2 = """A0 01 00 A1"""  #turn off str
 # some_bytes2 = bytearray.fromhex(hex_string2)
-port = 'COM4'
-relay_pin = 12
-port_exist = True
-try:
-    board = pyfirmata.Arduino('COM4')
-except IOError:
-    print("USB port not Found")
-    port_exist = False
-    time.sleep(3)
+# port = 'COM4'
+# relay_pin = 12
+# port_exist = True
+# try:
+#     board = pyfirmata.Arduino('COM4')
+# except IOError:
+#     print("USB port not Found")
+#     port_exist = False
+#     time.sleep(3)
 
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
@@ -444,6 +444,7 @@ class App(QMainWindow):
         self.setWindowTitle("Thermal Image Control")
         self.setMinimumWidth(1000)
         self.setMinimumHeight(700)
+        self.subParametersWindow = None
         
         # create the label that holds the image
         self.image_label = QLabel(self)
@@ -569,118 +570,14 @@ class App(QMainWindow):
             else:
                 print("wrong input! Want int")
 
-        # create boxs for saving object parameters
-        box_emiss = QLineEdit('Emiss', self)
-        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
-        box_emiss.resize(70,30)
-        box_emiss.move(685,260)
-        box_emiss.returnPressed.connect(lambda: save_emiss())
-        def save_emiss():
-            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
-                global Emiss
-                Emiss = float(box_emiss.text())
-                print("You have set Emiss to  " + str(Emiss) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_trefl = QLineEdit('TRefl', self)
-        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
-        box_trefl.resize(70,30)
-        box_trefl.move(785,260)
-        box_trefl.returnPressed.connect(lambda: save_trefl())
-        def save_trefl():
-            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
-                global TRefl
-                TRefl = float(box_trefl.text())
-                print("You have set TRefl to  " + str(TRefl) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_tatm = QLineEdit('TAtm', self)
-        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatm.resize(70,30)
-        box_tatm.move(885,260)
-        box_tatm.returnPressed.connect(lambda: save_tatm())
-        def save_tatm():
-            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
-                global TAtm
-                TAtm = float(box_tatm.text())
-                print("You have set TAtm to  " + str(TAtm) + "  !")
-                global TAtmC
-                TAtmC = TAtm - 273.15
-                print("You have also set TAtm to  " + str(TAtmC) + "  !")
-                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
-                global ExtOpticsTemp
-                ExtOpticsTemp = TAtm
-                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
-            else:
-                print("wrong input! Want float")
-
-        box_tatmc = QLineEdit('TAtmC', self)
-        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatmc.resize(70,30)
-        box_tatmc.move(685,300)
-        box_tatmc.returnPressed.connect(lambda: save_tatmc())
-        def save_tatmc():
-            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
-                global TAtmC
-                TAtmC = float(box_tatmc.text())
-                print("You have set TAtmC to  " + str(TAtmC) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_humidity = QLineEdit('Humidity', self)
-        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
-        box_humidity.resize(70,30)
-        box_humidity.move(785,300)
-        box_humidity.returnPressed.connect(lambda: save_humidity())
-        def save_humidity():
-            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
-                global Humidity
-                Humidity = float(box_humidity.text())
-                print("You have set Humidity to  " + str(Humidity) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_dist = QLineEdit('Dist', self)
-        box_dist.setAlignment(QtCore.Qt.AlignCenter)
-        box_dist.resize(70,30)
-        box_dist.move(885,300)
-        box_dist.returnPressed.connect(lambda: save_dist())
-        def save_dist():
-            if re.match("^\d+(\.\d+)?$", box_dist.text()):
-                global Dist
-                Dist = float(box_dist.text())
-                print("You have set Dist to  " + str(Dist) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
-        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTransmission.resize(150,30)
-        box_extOpticsTransmission.move(660,340)
-        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
-        def save_extOpticsTransmission():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
-                global ExtOpticsTransmission
-                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
-                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
-        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTemp.resize(150,30)
-        box_extOpticsTemp.move(830,340)
-        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
-        def save_extOpticsTemp():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
-                global ExtOpticsTemp
-                ExtOpticsTemp = float(box_extOpticsTemp.text())
-                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-            else:
-                print("wrong input! Want float")            
+        button_parameter = QPushButton('Set Parameters', self)
+        button_parameter.resize(280,35)
+        button_parameter.move(680,255)
+        button_parameter.clicked.connect(lambda: click_button_parameter())
+        def click_button_parameter():
+            if self.subParametersWindow is None:
+                self.subParametersWindow = SubParameterGUI()
+            self.subParametersWindow.show()           
 
         # for the data saving path and also saved filename
         box_path = QLineEdit('Data Saving Name', self)
@@ -861,13 +758,129 @@ class App(QMainWindow):
             convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-        # rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        # h, w, ch = rgb_image.shape
-        # bytes_per_line = ch * w
-        # convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        # p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
-        # return QPixmap.fromImage(p)
     
+class SubParameterGUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Camera Parameter Setting")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.setMinimumWidth(365)
+        self.setMinimumHeight(290)
+
+        # create boxs for saving object parameters
+        box_emiss = QLineEdit('Emiss', self)
+        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
+        box_emiss.resize(70,30)
+        box_emiss.move(20,20)
+        box_emiss.returnPressed.connect(lambda: save_emiss())
+        def save_emiss():
+            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
+                global Emiss
+                Emiss = float(box_emiss.text())
+                print("You have set Emiss to  " + str(Emiss) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_trefl = QLineEdit('TRefl', self)
+        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
+        box_trefl.resize(70,30)
+        box_trefl.move(20,60)
+        box_trefl.returnPressed.connect(lambda: save_trefl())
+        def save_trefl():
+            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
+                global TRefl
+                TRefl = float(box_trefl.text())
+                print("You have set TRefl to  " + str(TRefl) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_tatm = QLineEdit('TAtm', self)
+        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatm.resize(70,30)
+        box_tatm.move(20,100)
+        box_tatm.returnPressed.connect(lambda: save_tatm())
+        def save_tatm():
+            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
+                global TAtm
+                TAtm = float(box_tatm.text())
+                print("You have set TAtm to  " + str(TAtm) + "  !")
+                global TAtmC
+                TAtmC = TAtm - 273.15
+                print("You have also set TAtm to  " + str(TAtmC) + "  !")
+                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
+                global ExtOpticsTemp
+                ExtOpticsTemp = TAtm
+                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
+            else:
+                print("wrong input! Want float")
+
+        box_tatmc = QLineEdit('TAtmC', self)
+        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatmc.resize(70,30)
+        box_tatmc.move(20,140)
+        box_tatmc.returnPressed.connect(lambda: save_tatmc())
+        def save_tatmc():
+            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
+                global TAtmC
+                TAtmC = float(box_tatmc.text())
+                print("You have set TAtmC to  " + str(TAtmC) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_humidity = QLineEdit('Humidity', self)
+        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
+        box_humidity.resize(70,30)
+        box_humidity.move(20,180)
+        box_humidity.returnPressed.connect(lambda: save_humidity())
+        def save_humidity():
+            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
+                global Humidity
+                Humidity = float(box_humidity.text())
+                print("You have set Humidity to  " + str(Humidity) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_dist = QLineEdit('Dist', self)
+        box_dist.setAlignment(QtCore.Qt.AlignCenter)
+        box_dist.resize(70,30)
+        box_dist.move(20,220)
+        box_dist.returnPressed.connect(lambda: save_dist())
+        def save_dist():
+            if re.match("^\d+(\.\d+)?$", box_dist.text()):
+                global Dist
+                Dist = float(box_dist.text())
+                print("You have set Dist to  " + str(Dist) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
+        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTransmission.resize(150,30)
+        box_extOpticsTransmission.move(180,20)
+        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
+        def save_extOpticsTransmission():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
+                global ExtOpticsTransmission
+                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
+                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
+        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTemp.resize(150,30)
+        box_extOpticsTemp.move(180,60)
+        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
+        def save_extOpticsTemp():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
+                global ExtOpticsTemp
+                ExtOpticsTemp = float(box_extOpticsTemp.text())
+                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+            else:
+                print("wrong input! Want float")        
+
 if __name__=="__main__":
     app = QApplication(sys.argv)
     a = App()
