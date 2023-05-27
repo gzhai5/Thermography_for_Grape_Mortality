@@ -467,32 +467,32 @@ class App(QMainWindow):
         button_DAQ = QPushButton('DAQ', self)
         button_DAQ.clicked.connect(self.open_DAQ_window)
         button_DAQ.resize(80,40)
-        button_DAQ.move(880,160)
+        button_DAQ.move(880,30)
 
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
-        button_connect.move(680,160)
+        button_connect.move(680,30)
 
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,160)
+        button_disconnect.move(780,30)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
         button_autofocus.resize(80,40)
-        button_autofocus.move(680,210)
+        button_autofocus.move(680,80)
 
         button_focusplus = QPushButton('+', self)
         button_focusplus.clicked.connect(self.click_focusplus)
         button_focusplus.resize(80,40)
-        button_focusplus.move(780,210)
+        button_focusplus.move(780,80)
 
         button_focusminus = QPushButton('-', self)
         button_focusminus.clicked.connect(self.click_focusminus)
         button_focusminus.resize(80,40)
-        button_focusminus.move(880,210)
+        button_focusminus.move(880,80)
 
         combo_box_autofocus_method = QComboBox(self)
         options = ["Coarse", "Fine"]
