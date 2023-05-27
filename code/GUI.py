@@ -445,6 +445,7 @@ class App(QMainWindow):
         self.setMinimumWidth(1000)
         self.setMinimumHeight(700)
         self.subParametersWindow = None
+        self.DAQ_window = None
         
         # create the label that holds the image
         self.image_label = QLabel(self)
@@ -464,7 +465,7 @@ class App(QMainWindow):
 
         # create buttons
         button_DAQ = QPushButton('DAQ', self)
-        button_DAQ.clicked.connect(self.click_DAQ)
+        button_DAQ.clicked.connect(self.open_DAQ_window)
         button_DAQ.resize(80,40)
         button_DAQ.move(880,160)
 
@@ -530,46 +531,6 @@ class App(QMainWindow):
             else:
                 print("wrong input! Want int")
 
-        # set boxes for typing in time, and the last one is for data saving_path
-        box_t0 = QLineEdit('t0', self)
-        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
-        box_t0.resize(80,30)
-        box_t0.move(680,40)
-        box_t0.returnPressed.connect(lambda: save_t0())
-        def save_t0():
-            if re.match("^\d+$", box_t0.text()):
-                global t0
-                t0 = int(box_t0.text())
-                print("You have set t0 to  " + str(t0) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        box_t1 = QLineEdit('t1', self)
-        box_t1.setAlignment(QtCore.Qt.AlignCenter)
-        box_t1.resize(80,30)
-        box_t1.move(780,40)
-        box_t1.returnPressed.connect(lambda: save_t1())
-        def save_t1():
-            if re.match("^\d+$", box_t1.text()):
-                global t1
-                t1 = int(box_t1.text())
-                print("You have set t1 to  " + str(t1) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        box_t2 = QLineEdit('t2', self)
-        box_t2.setAlignment(QtCore.Qt.AlignCenter)
-        box_t2.resize(80,30)
-        box_t2.move(880,40)
-        box_t2.returnPressed.connect(lambda: save_t2())
-        def save_t2():
-            if re.match("^\d+$", box_t2.text()):
-                global t2
-                t2 = int(box_t2.text())
-                print("You have set t2 to  " + str(t2) + "  !")
-            else:
-                print("wrong input! Want int")
-
         button_parameter = QPushButton('Set Parameters', self)
         button_parameter.resize(280,35)
         button_parameter.move(680,255)
@@ -578,22 +539,6 @@ class App(QMainWindow):
             if self.subParametersWindow is None:
                 self.subParametersWindow = SubParameterGUI()
             self.subParametersWindow.show()           
-
-        # for the data saving path and also saved filename
-        box_path = QLineEdit('Data Saving Name', self)
-        box_path.setAlignment(QtCore.Qt.AlignCenter)
-        box_path.resize(280,30)
-        box_path.move(680,120)
-        box_path.returnPressed.connect(lambda: save_file())
-        def save_file():
-            global save_file_name
-            save_file_name = box_path.text() + ".npy"
-            print("You have choosen " + save_file_name + " as the saved npy filename")
-
-        button_path = QPushButton("Browse", self)
-        button_path.resize(280,30)
-        button_path.move(680,80)
-        button_path.clicked.connect(self.save_path)
 
         # create the main window
         self.vlayout = QVBoxLayout()        
@@ -643,26 +588,10 @@ class App(QMainWindow):
                 cur.insertBlock()
         self.textbox.setTextCursor(cur)     # Update visible cursor
 
-    def save_path(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
-        global Saved_Folder
-        Saved_Folder = directory
-        print("Choose Download Directory:  " +Saved_Folder)
-
-    def click_DAQ(self):
-        print('-------------DAQ Clicked-------------')
-        if (port_exist == False):
-            print("USB not inserted, cannot go to timed version!")
-        else:
-            global mode
-            mode = "TimedStream"
-            print("Now we are going to switch mode to a timed streaming mode!")
-            self.thread.stop()
-            self.thread = VideoThread_timed()
-            self.thread.change_pixmap_signal.connect(self.update_image)
-            self.thread.start()
+    def open_DAQ_window(self):
+        if self.DAQ_window is None:    
+            self.DAQ_window = DAQ_GUI()
+        self.DAQ_window.show()
 
     def click_connect(self):
         print('-------------Connect Clicked-------------')
@@ -758,7 +687,145 @@ class App(QMainWindow):
             convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-    
+
+class DAQ_GUI(QWidget):  
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Data Acquistion Setting")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.setMinimumWidth(360)
+        self.setMinimumHeight(410)
+
+        # set boxes for typing in time, and the last one is for data saving_path
+        label_t0 = QLabel('t0', self)
+        label_t0.move(20, 20)
+        box_t0 = QLineEdit(str(t0), self)
+        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
+        box_t0.resize(40,30)
+        box_t0.move(40,20)
+        box_t0.returnPressed.connect(lambda: save_t0())
+        def save_t0():
+            if re.match("^\d+$", box_t0.text()):
+                global t0
+                t0 = int(box_t0.text())
+                print("You have set t0 to  " + str(t0) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_t1 = QLabel('t1', self)
+        label_t1.move(120, 20)
+        box_t1 = QLineEdit(str(t1), self)
+        box_t1.setAlignment(QtCore.Qt.AlignCenter)
+        box_t1.resize(40,30)
+        box_t1.move(140,20)
+        box_t1.returnPressed.connect(lambda: save_t1())
+        def save_t1():
+            if re.match("^\d+$", box_t1.text()):
+                global t1
+                t1 = int(box_t1.text())
+                print("You have set t1 to  " + str(t1) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_t2 = QLabel('t2', self)
+        label_t2.move(220, 20)
+        box_t2 = QLineEdit(str(t2), self)
+        box_t2.setAlignment(QtCore.Qt.AlignCenter)
+        box_t2.resize(40,30)
+        box_t2.move(240,20)
+        box_t2.returnPressed.connect(lambda: save_t2())
+        def save_t2():
+            if re.match("^\d+$", box_t2.text()):
+                global t2
+                t2 = int(box_t2.text())
+                print("You have set t2 to  " + str(t2) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        # for the data saving path and also saved filename
+        label_filename = QLabel('Data Name', self)
+        label_filename.move(120, 60)
+        box_path = QLineEdit(save_file_name, self)
+        box_path.setAlignment(QtCore.Qt.AlignCenter)
+        box_path.resize(280,30)
+        box_path.move(20,90)
+        box_path.returnPressed.connect(lambda: save_file())
+        def save_file():
+            global save_file_name
+            save_file_name = box_path.text() + ".npy"
+            print("You have choosen " + save_file_name + " as the saved npy filename")
+
+        button_path = QPushButton("Data Saving Folder", self)
+        button_path.resize(280,30)
+        button_path.move(20,120)
+        button_path.clicked.connect(lambda: save_path())
+        def save_path():
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
+            global Saved_Folder
+            Saved_Folder = directory
+            print("Choose Download Directory:  " +Saved_Folder)
+
+        label_cultivar = QLabel('Cultivar', self)
+        label_cultivar.move(30,160)
+        box_cultivar = QLineEdit('', self)
+        box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
+        box_cultivar.resize(70,30)
+        box_cultivar.move(100,160)
+        box_cultivar.returnPressed.connect(lambda: save_cultivar())
+        def save_cultivar():
+            print("cultivar is " + box_cultivar.text())
+
+        label_branch = QLabel('Branch', self)
+        label_branch.move(30,200)
+        box_branch = QLineEdit('', self)
+        box_branch.setAlignment(QtCore.Qt.AlignCenter)
+        box_branch.resize(70,30)
+        box_branch.move(100,200)
+        box_branch.returnPressed.connect(lambda: save_branch())
+        def save_branch():
+            print("branch is " + box_branch.text()) 
+
+        label_node = QLabel('Node', self)
+        label_node.move(30, 240)
+        box_node = QLineEdit('', self)
+        box_node.setAlignment(QtCore.Qt.AlignCenter)
+        box_node.resize(70,30)
+        box_node.move(100,240)
+        box_node.returnPressed.connect(lambda: save_node())
+        def save_node():
+            print("node is " + box_node.text())     
+
+        button_start_end = QPushButton('Start DAQ', self)
+        button_start_end.resize(100,40)
+        button_start_end.move(250,360)
+        button_start_end.clicked.connect(lambda: start_DAQ())
+        def start_DAQ():
+            print('-------------DAQ Clicked-------------')
+            if (port_exist == False):
+                print("USB not inserted, cannot go to timed version!")
+            else:
+                global mode
+                if mode != "TimedStream":
+                    mode = "TimedStream"
+                    print("Now we are going to switch mode to a timed streaming mode!")
+                    button_start_end.setText("Stop DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread_timed()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+                elif mode == "TimedStream":
+                    mode = "contious_stream"
+                    print("You have stopped DAQ and jumped to contious streaming mode!")
+                    button_start_end.setText("Start DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+
+
 class SubParameterGUI(QWidget):
     def __init__(self):
         super().__init__()
