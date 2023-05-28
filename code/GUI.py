@@ -41,7 +41,18 @@ img_data_array = np.zeros((N,480,640))
 
 # set up the saving path and saved filename for the data
 Saved_Folder = "C:/Users/Alfoul/Desktop/Thermography_for_Grape_Mortality/code/SavedData/"
-save_file_name = "img_data.npy"
+cultivar = "unknown"
+branch_num = 1
+if branch_num < 10:
+    branch = "B0" + str(branch_num)
+else:
+    branch = "B" + str(branch_num)
+node_num = 1
+if node_num < 10:
+    node = "N0" + str(node_num)
+else:
+    node = "N" + str(node_num)
+save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
 
 # set up the focus step, 100 as a default
 focus_step = 100
@@ -336,6 +347,7 @@ class VideoThread_timed(QThread):
 
                 # about to run
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
+                global branch_num, node_num, branch, node, save_file_name
 
                 # save down parameters in .cfg in the same directory of where image data saved
                 config = configparser.ConfigParser()
@@ -417,6 +429,27 @@ class VideoThread_timed(QThread):
                         elif (diff_time >= t1 and diff_time < t2):
                             # ser.write(some_bytes2)
                              board.digital[relay_pin].write(0)
+
+                        # update branch and node indexs
+                        if node_num == 99:
+                            node_num = 0
+                            branch_num += 1
+                        else:
+                            node_num += 1
+                        if branch_num < 10:
+                            branch = "B0" + str(branch_num)
+                        else:
+                            branch = "B" + str(branch_num)
+                        if node_num < 10:
+                            node = "N0" + str(node_num)
+                        else:
+                            node = "N" + str(node_num)
+                        save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+                        DAQ_GUI.box_cultivar.setText(cultivar)
+                        DAQ_GUI.box_branch.setText(str(branch_num))
+                        DAQ_GUI.box_node.setText(str(node_num))
+                        DAQ_GUI.box_path.setText(save_file_name)
+                        
 
                     except PySpin.SpinnakerException as ex:
                         print('Error: %s' % ex)
@@ -500,7 +533,7 @@ class App(QMainWindow):
         combo_box_autofocus_method.setCurrentIndex(0)
         combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
         combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(680,380)
+        combo_box_autofocus_method.move(680,140)
 
         # combo_box_pixelformat_method = QComboBox(self)
         # options_pf = ["Mono8", "Mono16"]
@@ -521,7 +554,7 @@ class App(QMainWindow):
         box_focus_step = QLineEdit('Focus Step', self)
         box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
         box_focus_step.resize(90,40)
-        box_focus_step.move(880,380)
+        box_focus_step.move(880,140)
         box_focus_step.returnPressed.connect(lambda: save_focus_step())
         def save_focus_step():
             if re.match("^\d+$", box_focus_step.text()):
@@ -770,33 +803,62 @@ class DAQ_GUI(QWidget):
 
         label_cultivar = QLabel('Cultivar', self)
         label_cultivar.move(30,160)
-        box_cultivar = QLineEdit('', self)
+        box_cultivar = QLineEdit(cultivar, self)
         box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
         box_cultivar.resize(70,30)
         box_cultivar.move(100,160)
         box_cultivar.returnPressed.connect(lambda: save_cultivar())
         def save_cultivar():
-            print("cultivar is " + box_cultivar.text())
+            global cultivar
+            cultivar = box_cultivar.text()
+            box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+            print("You have set cultivar to  " + cultivar + "  !")
 
         label_branch = QLabel('Branch', self)
         label_branch.move(30,200)
-        box_branch = QLineEdit('', self)
+        box_branch = QLineEdit(str(branch_num), self)
         box_branch.setAlignment(QtCore.Qt.AlignCenter)
         box_branch.resize(70,30)
         box_branch.move(100,200)
         box_branch.returnPressed.connect(lambda: save_branch())
         def save_branch():
-            print("branch is " + box_branch.text()) 
+            if re.match("^\d+$", box_branch.text()):
+                if int(box_branch.text()) < 0 or int(box_branch.text()) > 99:
+                    print("wrong input for branch number! Want int between 0 and 99.")
+                    return
+                global branch_num, branch
+                branch_num = int(box_branch.text())
+                if branch_num < 10:
+                    branch = "B0" + str(branch_num)
+                else:
+                    branch = "B" + str(branch_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+                print("You have set branch to  " + str(branch) + "  !")
+            else:
+                print("wrong input! Want int")
 
         label_node = QLabel('Node', self)
         label_node.move(30, 240)
-        box_node = QLineEdit('', self)
+        box_node = QLineEdit(str(node_num), self)
         box_node.setAlignment(QtCore.Qt.AlignCenter)
         box_node.resize(70,30)
         box_node.move(100,240)
         box_node.returnPressed.connect(lambda: save_node())
         def save_node():
-            print("node is " + box_node.text())     
+            if re.match("^\d+$", box_node.text()):
+                if int(box_node.text()) < 0 or int(box_node.text()) > 99:
+                    print("wrong input for node number! Want int between 0 and 99.")
+                    return
+                global node_num, node
+                node_num = int(box_node.text())
+                if node_num < 10:
+                    node = "N0" + str(node_num)
+                else:
+                    node = "N" + str(node_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+                print("You have set node to  " + str(node) + "  !")
+            else:
+                print("wrong input! Want int")     
 
         button_start_end = QPushButton('Start DAQ', self)
         button_start_end.resize(100,40)
