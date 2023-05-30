@@ -3,34 +3,22 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-# import PySpin, serial, pyfirmata
+import PySpin, serial, pyfirmata
 import os, keyboard, time, base64, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
 from skimage import img_as_ubyte
 
 
 # switch initilization
-# port = 'COM3'
-# port_exist = True
-# try:
-#     ser = serial.Serial(port, 9600, timeout=1)
-# except serial.serialutil.SerialException:
-#     print("USB port not Found")
-#     port_exist = False
-#     time.sleep(3)
-# hex_string1 = """A0 01 01 A2"""  #turn on str
-# some_bytes1 = bytearray.fromhex(hex_string1)
-# hex_string2 = """A0 01 00 A1"""  #turn off str
-# some_bytes2 = bytearray.fromhex(hex_string2)
-# port = 'COM4'
-# relay_pin = 12
-# port_exist = True
-# try:
-#     board = pyfirmata.Arduino('COM4')
-# except IOError:
-#     print("USB port not Found")
-#     port_exist = False
-#     time.sleep(3)
+port = 'COM4'
+relay_pin = 12
+port_exist = True
+try:
+    board = pyfirmata.Arduino('COM4')
+except IOError:
+    print("USB port not Found")
+    port_exist = False
+    time.sleep(3)
 
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
@@ -346,8 +334,9 @@ class VideoThread_timed(QThread):
                     print('K2 =', K2)
 
                 # about to run
-                print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
                 global branch_num, node_num, branch, node, save_file_name
+                print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
+                print("going to conduct data acquisition on " + cultivar + " cultivar of branch (" + branch + ") and node (" + node + ")")
 
                 # save down parameters in .cfg in the same directory of where image data saved
                 config = configparser.ConfigParser()
@@ -420,6 +409,23 @@ class VideoThread_timed(QThread):
                             # # save the image content array to a npy file
                             np.save(os.path.join(Saved_Folder, save_file_name),img_data_array)   
                             print("------------Image Contents Saved------------")
+                            print("Data saved into   " + save_file_name)
+
+                            # update branch and node indexs for the next
+                            if node_num == 99:
+                                node_num = 0
+                                branch_num += 1
+                            else:
+                                node_num += 1
+                            if branch_num < 10:
+                                branch = "B0" + str(branch_num)
+                            else:
+                                branch = "B" + str(branch_num)
+                            if node_num < 10:
+                                node = "N0" + str(node_num)
+                            else:
+                                node = "N" + str(node_num)
+                            save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
 
                             i = N + 1
                         diff_time = time.time() - start_time
@@ -429,26 +435,6 @@ class VideoThread_timed(QThread):
                         elif (diff_time >= t1 and diff_time < t2):
                             # ser.write(some_bytes2)
                              board.digital[relay_pin].write(0)
-
-                        # update branch and node indexs
-                        if node_num == 99:
-                            node_num = 0
-                            branch_num += 1
-                        else:
-                            node_num += 1
-                        if branch_num < 10:
-                            branch = "B0" + str(branch_num)
-                        else:
-                            branch = "B" + str(branch_num)
-                        if node_num < 10:
-                            node = "N0" + str(node_num)
-                        else:
-                            node = "N" + str(node_num)
-                        save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
-                        DAQ_GUI.box_cultivar.setText(cultivar)
-                        DAQ_GUI.box_branch.setText(str(branch_num))
-                        DAQ_GUI.box_node.setText(str(node_num))
-                        DAQ_GUI.box_path.setText(save_file_name)
                         
 
                     except PySpin.SpinnakerException as ex:
@@ -571,7 +557,34 @@ class App(QMainWindow):
         def click_button_parameter():
             if self.subParametersWindow is None:
                 self.subParametersWindow = SubParameterGUI()
-            self.subParametersWindow.show()           
+            self.subParametersWindow.show()
+
+        button_start_end = QPushButton('Start DAQ', self)
+        button_start_end.resize(280,40)
+        button_start_end.move(680,300)
+        button_start_end.clicked.connect(lambda: start_DAQ())
+        def start_DAQ():
+            print('-------------DAQ Clicked-------------')
+            if (port_exist == False):
+                print("USB not inserted, cannot go to timed version!")
+            else:
+                global mode
+                if mode != "TimedStream":
+                    mode = "TimedStream"
+                    print("Now we are going to switch mode to a timed streaming mode!")
+                    button_start_end.setText("Stop DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread_timed()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+                elif mode == "TimedStream":
+                    mode = "contious_stream"
+                    print("You have stopped DAQ and jumped to contious streaming mode!")
+                    button_start_end.setText("Start DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()               
 
         # create the main window
         self.vlayout = QVBoxLayout()        
@@ -858,34 +871,13 @@ class DAQ_GUI(QWidget):
                 box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
                 print("You have set node to  " + str(node) + "  !")
             else:
-                print("wrong input! Want int")     
+                print("wrong input! Want int")
 
-        button_start_end = QPushButton('Start DAQ', self)
-        button_start_end.resize(100,40)
-        button_start_end.move(250,360)
-        button_start_end.clicked.connect(lambda: start_DAQ())
-        def start_DAQ():
-            print('-------------DAQ Clicked-------------')
-            if (port_exist == False):
-                print("USB not inserted, cannot go to timed version!")
-            else:
-                global mode
-                if mode != "TimedStream":
-                    mode = "TimedStream"
-                    print("Now we are going to switch mode to a timed streaming mode!")
-                    button_start_end.setText("Stop DAQ")
-                    self.thread.stop()
-                    self.thread = VideoThread_timed()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()
-                elif mode == "TimedStream":
-                    mode = "contious_stream"
-                    print("You have stopped DAQ and jumped to contious streaming mode!")
-                    button_start_end.setText("Start DAQ")
-                    self.thread.stop()
-                    self.thread = VideoThread()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()
+        # while True:
+        #     box_cultivar.setText(cultivar)
+        #     box_branch.setText(str(branch_num))
+        #     box_node.setText(str(node_num))
+        #     box_path.setText(save_file_name)     
 
 
 class SubParameterGUI(QWidget):

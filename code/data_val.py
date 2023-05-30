@@ -1,5 +1,5 @@
 import sys
-import os
+import os, time
 import cv2
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel, QLineEdit, QPushButton, QListWidget, QCheckBox, QFileDialog, QMessageBox, QProgressBar, QHBoxLayout, QGridLayout
@@ -31,7 +31,7 @@ class VideoPlayer:
 
     def validate_number(self, number_str, min_val, max_val):
         try:
-            number = int(number_str)
+            number = int(number_str[len(number_str)-2:])
             if min_val <= number <= max_val:
                 return number
         except ValueError:
@@ -56,6 +56,10 @@ class VideoPlayer:
             self.show_error_message(str(e))
             return
         
+        frame_rate = 30
+        actual_frame_rate = self.num_frames / len(self.frames)
+        frame_delay = int((1 / frame_rate) * 1000)
+
         while self.current_frame < self.num_frames:
             frame = self.frames[self.current_frame]
             frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
@@ -69,6 +73,9 @@ class VideoPlayer:
             
             if not self.video_paused:
                 self.current_frame += 1
+
+            actual_frame_delay = int(frame_delay / actual_frame_rate)
+            time.sleep(actual_frame_delay/1000)
 
 class MainWindow(QMainWindow):
     def __init__(self):
