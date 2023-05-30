@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-import PySpin, serial, pyfirmata
+# import PySpin, serial, pyfirmata
 import os, keyboard, time, base64, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
 from skimage import img_as_ubyte
@@ -22,15 +22,15 @@ from skimage import img_as_ubyte
 # some_bytes1 = bytearray.fromhex(hex_string1)
 # hex_string2 = """A0 01 00 A1"""  #turn off str
 # some_bytes2 = bytearray.fromhex(hex_string2)
-port = 'COM4'
-relay_pin = 12
-port_exist = True
-try:
-    board = pyfirmata.Arduino('COM4')
-except IOError:
-    print("USB port not Found")
-    port_exist = False
-    time.sleep(3)
+# port = 'COM4'
+# relay_pin = 12
+# port_exist = True
+# try:
+#     board = pyfirmata.Arduino('COM4')
+# except IOError:
+#     print("USB port not Found")
+#     port_exist = False
+#     time.sleep(3)
 
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
@@ -41,7 +41,18 @@ img_data_array = np.zeros((N,480,640))
 
 # set up the saving path and saved filename for the data
 Saved_Folder = "C:/Users/Alfoul/Desktop/Thermography_for_Grape_Mortality/code/SavedData/"
-save_file_name = "img_data.npy"
+cultivar = "unknown"
+branch_num = 1
+if branch_num < 10:
+    branch = "B0" + str(branch_num)
+else:
+    branch = "B" + str(branch_num)
+node_num = 1
+if node_num < 10:
+    node = "N0" + str(node_num)
+else:
+    node = "N" + str(node_num)
+save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
 
 # set up the focus step, 100 as a default
 focus_step = 100
@@ -336,6 +347,7 @@ class VideoThread_timed(QThread):
 
                 # about to run
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
+                global branch_num, node_num, branch, node, save_file_name
 
                 # save down parameters in .cfg in the same directory of where image data saved
                 config = configparser.ConfigParser()
@@ -418,6 +430,27 @@ class VideoThread_timed(QThread):
                             # ser.write(some_bytes2)
                              board.digital[relay_pin].write(0)
 
+                        # update branch and node indexs
+                        if node_num == 99:
+                            node_num = 0
+                            branch_num += 1
+                        else:
+                            node_num += 1
+                        if branch_num < 10:
+                            branch = "B0" + str(branch_num)
+                        else:
+                            branch = "B" + str(branch_num)
+                        if node_num < 10:
+                            node = "N0" + str(node_num)
+                        else:
+                            node = "N" + str(node_num)
+                        save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+                        DAQ_GUI.box_cultivar.setText(cultivar)
+                        DAQ_GUI.box_branch.setText(str(branch_num))
+                        DAQ_GUI.box_node.setText(str(node_num))
+                        DAQ_GUI.box_path.setText(save_file_name)
+                        
+
                     except PySpin.SpinnakerException as ex:
                         print('Error: %s' % ex)
                         break
@@ -444,6 +477,8 @@ class App(QMainWindow):
         self.setWindowTitle("Thermal Image Control")
         self.setMinimumWidth(1000)
         self.setMinimumHeight(700)
+        self.subParametersWindow = None
+        self.DAQ_window = None
         
         # create the label that holds the image
         self.image_label = QLabel(self)
@@ -463,34 +498,34 @@ class App(QMainWindow):
 
         # create buttons
         button_DAQ = QPushButton('DAQ', self)
-        button_DAQ.clicked.connect(self.click_DAQ)
+        button_DAQ.clicked.connect(self.open_DAQ_window)
         button_DAQ.resize(80,40)
-        button_DAQ.move(880,160)
+        button_DAQ.move(880,30)
 
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
-        button_connect.move(680,160)
+        button_connect.move(680,30)
 
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,160)
+        button_disconnect.move(780,30)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
         button_autofocus.resize(80,40)
-        button_autofocus.move(680,210)
+        button_autofocus.move(680,80)
 
         button_focusplus = QPushButton('+', self)
         button_focusplus.clicked.connect(self.click_focusplus)
         button_focusplus.resize(80,40)
-        button_focusplus.move(780,210)
+        button_focusplus.move(780,80)
 
         button_focusminus = QPushButton('-', self)
         button_focusminus.clicked.connect(self.click_focusminus)
         button_focusminus.resize(80,40)
-        button_focusminus.move(880,210)
+        button_focusminus.move(880,80)
 
         combo_box_autofocus_method = QComboBox(self)
         options = ["Coarse", "Fine"]
@@ -498,7 +533,7 @@ class App(QMainWindow):
         combo_box_autofocus_method.setCurrentIndex(0)
         combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
         combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(680,380)
+        combo_box_autofocus_method.move(680,140)
 
         # combo_box_pixelformat_method = QComboBox(self)
         # options_pf = ["Mono8", "Mono16"]
@@ -519,7 +554,7 @@ class App(QMainWindow):
         box_focus_step = QLineEdit('Focus Step', self)
         box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
         box_focus_step.resize(90,40)
-        box_focus_step.move(880,380)
+        box_focus_step.move(880,140)
         box_focus_step.returnPressed.connect(lambda: save_focus_step())
         def save_focus_step():
             if re.match("^\d+$", box_focus_step.text()):
@@ -529,174 +564,14 @@ class App(QMainWindow):
             else:
                 print("wrong input! Want int")
 
-        # set boxes for typing in time, and the last one is for data saving_path
-        box_t0 = QLineEdit('t0', self)
-        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
-        box_t0.resize(80,30)
-        box_t0.move(680,40)
-        box_t0.returnPressed.connect(lambda: save_t0())
-        def save_t0():
-            if re.match("^\d+$", box_t0.text()):
-                global t0
-                t0 = int(box_t0.text())
-                print("You have set t0 to  " + str(t0) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        box_t1 = QLineEdit('t1', self)
-        box_t1.setAlignment(QtCore.Qt.AlignCenter)
-        box_t1.resize(80,30)
-        box_t1.move(780,40)
-        box_t1.returnPressed.connect(lambda: save_t1())
-        def save_t1():
-            if re.match("^\d+$", box_t1.text()):
-                global t1
-                t1 = int(box_t1.text())
-                print("You have set t1 to  " + str(t1) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        box_t2 = QLineEdit('t2', self)
-        box_t2.setAlignment(QtCore.Qt.AlignCenter)
-        box_t2.resize(80,30)
-        box_t2.move(880,40)
-        box_t2.returnPressed.connect(lambda: save_t2())
-        def save_t2():
-            if re.match("^\d+$", box_t2.text()):
-                global t2
-                t2 = int(box_t2.text())
-                print("You have set t2 to  " + str(t2) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        # create boxs for saving object parameters
-        box_emiss = QLineEdit('Emiss', self)
-        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
-        box_emiss.resize(70,30)
-        box_emiss.move(685,260)
-        box_emiss.returnPressed.connect(lambda: save_emiss())
-        def save_emiss():
-            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
-                global Emiss
-                Emiss = float(box_emiss.text())
-                print("You have set Emiss to  " + str(Emiss) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_trefl = QLineEdit('TRefl', self)
-        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
-        box_trefl.resize(70,30)
-        box_trefl.move(785,260)
-        box_trefl.returnPressed.connect(lambda: save_trefl())
-        def save_trefl():
-            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
-                global TRefl
-                TRefl = float(box_trefl.text())
-                print("You have set TRefl to  " + str(TRefl) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_tatm = QLineEdit('TAtm', self)
-        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatm.resize(70,30)
-        box_tatm.move(885,260)
-        box_tatm.returnPressed.connect(lambda: save_tatm())
-        def save_tatm():
-            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
-                global TAtm
-                TAtm = float(box_tatm.text())
-                print("You have set TAtm to  " + str(TAtm) + "  !")
-                global TAtmC
-                TAtmC = TAtm - 273.15
-                print("You have also set TAtm to  " + str(TAtmC) + "  !")
-                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
-                global ExtOpticsTemp
-                ExtOpticsTemp = TAtm
-                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
-            else:
-                print("wrong input! Want float")
-
-        box_tatmc = QLineEdit('TAtmC', self)
-        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatmc.resize(70,30)
-        box_tatmc.move(685,300)
-        box_tatmc.returnPressed.connect(lambda: save_tatmc())
-        def save_tatmc():
-            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
-                global TAtmC
-                TAtmC = float(box_tatmc.text())
-                print("You have set TAtmC to  " + str(TAtmC) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_humidity = QLineEdit('Humidity', self)
-        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
-        box_humidity.resize(70,30)
-        box_humidity.move(785,300)
-        box_humidity.returnPressed.connect(lambda: save_humidity())
-        def save_humidity():
-            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
-                global Humidity
-                Humidity = float(box_humidity.text())
-                print("You have set Humidity to  " + str(Humidity) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_dist = QLineEdit('Dist', self)
-        box_dist.setAlignment(QtCore.Qt.AlignCenter)
-        box_dist.resize(70,30)
-        box_dist.move(885,300)
-        box_dist.returnPressed.connect(lambda: save_dist())
-        def save_dist():
-            if re.match("^\d+(\.\d+)?$", box_dist.text()):
-                global Dist
-                Dist = float(box_dist.text())
-                print("You have set Dist to  " + str(Dist) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
-        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTransmission.resize(150,30)
-        box_extOpticsTransmission.move(660,340)
-        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
-        def save_extOpticsTransmission():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
-                global ExtOpticsTransmission
-                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
-                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
-        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTemp.resize(150,30)
-        box_extOpticsTemp.move(830,340)
-        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
-        def save_extOpticsTemp():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
-                global ExtOpticsTemp
-                ExtOpticsTemp = float(box_extOpticsTemp.text())
-                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-            else:
-                print("wrong input! Want float")            
-
-        # for the data saving path and also saved filename
-        box_path = QLineEdit('Data Saving Name', self)
-        box_path.setAlignment(QtCore.Qt.AlignCenter)
-        box_path.resize(280,30)
-        box_path.move(680,120)
-        box_path.returnPressed.connect(lambda: save_file())
-        def save_file():
-            global save_file_name
-            save_file_name = box_path.text() + ".npy"
-            print("You have choosen " + save_file_name + " as the saved npy filename")
-
-        button_path = QPushButton("Browse", self)
-        button_path.resize(280,30)
-        button_path.move(680,80)
-        button_path.clicked.connect(self.save_path)
+        button_parameter = QPushButton('Set Parameters', self)
+        button_parameter.resize(280,35)
+        button_parameter.move(680,255)
+        button_parameter.clicked.connect(lambda: click_button_parameter())
+        def click_button_parameter():
+            if self.subParametersWindow is None:
+                self.subParametersWindow = SubParameterGUI()
+            self.subParametersWindow.show()           
 
         # create the main window
         self.vlayout = QVBoxLayout()        
@@ -746,26 +621,10 @@ class App(QMainWindow):
                 cur.insertBlock()
         self.textbox.setTextCursor(cur)     # Update visible cursor
 
-    def save_path(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
-        global Saved_Folder
-        Saved_Folder = directory
-        print("Choose Download Directory:  " +Saved_Folder)
-
-    def click_DAQ(self):
-        print('-------------DAQ Clicked-------------')
-        if (port_exist == False):
-            print("USB not inserted, cannot go to timed version!")
-        else:
-            global mode
-            mode = "TimedStream"
-            print("Now we are going to switch mode to a timed streaming mode!")
-            self.thread.stop()
-            self.thread = VideoThread_timed()
-            self.thread.change_pixmap_signal.connect(self.update_image)
-            self.thread.start()
+    def open_DAQ_window(self):
+        if self.DAQ_window is None:    
+            self.DAQ_window = DAQ_GUI()
+        self.DAQ_window.show()
 
     def click_connect(self):
         print('-------------Connect Clicked-------------')
@@ -861,13 +720,296 @@ class App(QMainWindow):
             convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-        # rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        # h, w, ch = rgb_image.shape
-        # bytes_per_line = ch * w
-        # convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        # p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
-        # return QPixmap.fromImage(p)
-    
+
+class DAQ_GUI(QWidget):  
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Data Acquistion Setting")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.setMinimumWidth(360)
+        self.setMinimumHeight(410)
+
+        # set boxes for typing in time, and the last one is for data saving_path
+        label_t0 = QLabel('t0', self)
+        label_t0.move(20, 20)
+        box_t0 = QLineEdit(str(t0), self)
+        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
+        box_t0.resize(40,30)
+        box_t0.move(40,20)
+        box_t0.returnPressed.connect(lambda: save_t0())
+        def save_t0():
+            if re.match("^\d+$", box_t0.text()):
+                global t0
+                t0 = int(box_t0.text())
+                print("You have set t0 to  " + str(t0) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_t1 = QLabel('t1', self)
+        label_t1.move(120, 20)
+        box_t1 = QLineEdit(str(t1), self)
+        box_t1.setAlignment(QtCore.Qt.AlignCenter)
+        box_t1.resize(40,30)
+        box_t1.move(140,20)
+        box_t1.returnPressed.connect(lambda: save_t1())
+        def save_t1():
+            if re.match("^\d+$", box_t1.text()):
+                global t1
+                t1 = int(box_t1.text())
+                print("You have set t1 to  " + str(t1) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_t2 = QLabel('t2', self)
+        label_t2.move(220, 20)
+        box_t2 = QLineEdit(str(t2), self)
+        box_t2.setAlignment(QtCore.Qt.AlignCenter)
+        box_t2.resize(40,30)
+        box_t2.move(240,20)
+        box_t2.returnPressed.connect(lambda: save_t2())
+        def save_t2():
+            if re.match("^\d+$", box_t2.text()):
+                global t2
+                t2 = int(box_t2.text())
+                print("You have set t2 to  " + str(t2) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        # for the data saving path and also saved filename
+        label_filename = QLabel('Data Name', self)
+        label_filename.move(120, 60)
+        box_path = QLineEdit(save_file_name, self)
+        box_path.setAlignment(QtCore.Qt.AlignCenter)
+        box_path.resize(280,30)
+        box_path.move(20,90)
+        box_path.returnPressed.connect(lambda: save_file())
+        def save_file():
+            global save_file_name
+            save_file_name = box_path.text() + ".npy"
+            print("You have choosen " + save_file_name + " as the saved npy filename")
+
+        button_path = QPushButton("Data Saving Folder", self)
+        button_path.resize(280,30)
+        button_path.move(20,120)
+        button_path.clicked.connect(lambda: save_path())
+        def save_path():
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
+            global Saved_Folder
+            Saved_Folder = directory
+            print("Choose Download Directory:  " +Saved_Folder)
+
+        label_cultivar = QLabel('Cultivar', self)
+        label_cultivar.move(30,160)
+        box_cultivar = QLineEdit(cultivar, self)
+        box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
+        box_cultivar.resize(70,30)
+        box_cultivar.move(100,160)
+        box_cultivar.returnPressed.connect(lambda: save_cultivar())
+        def save_cultivar():
+            global cultivar
+            cultivar = box_cultivar.text()
+            box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+            print("You have set cultivar to  " + cultivar + "  !")
+
+        label_branch = QLabel('Branch', self)
+        label_branch.move(30,200)
+        box_branch = QLineEdit(str(branch_num), self)
+        box_branch.setAlignment(QtCore.Qt.AlignCenter)
+        box_branch.resize(70,30)
+        box_branch.move(100,200)
+        box_branch.returnPressed.connect(lambda: save_branch())
+        def save_branch():
+            if re.match("^\d+$", box_branch.text()):
+                if int(box_branch.text()) < 0 or int(box_branch.text()) > 99:
+                    print("wrong input for branch number! Want int between 0 and 99.")
+                    return
+                global branch_num, branch
+                branch_num = int(box_branch.text())
+                if branch_num < 10:
+                    branch = "B0" + str(branch_num)
+                else:
+                    branch = "B" + str(branch_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+                print("You have set branch to  " + str(branch) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_node = QLabel('Node', self)
+        label_node.move(30, 240)
+        box_node = QLineEdit(str(node_num), self)
+        box_node.setAlignment(QtCore.Qt.AlignCenter)
+        box_node.resize(70,30)
+        box_node.move(100,240)
+        box_node.returnPressed.connect(lambda: save_node())
+        def save_node():
+            if re.match("^\d+$", box_node.text()):
+                if int(box_node.text()) < 0 or int(box_node.text()) > 99:
+                    print("wrong input for node number! Want int between 0 and 99.")
+                    return
+                global node_num, node
+                node_num = int(box_node.text())
+                if node_num < 10:
+                    node = "N0" + str(node_num)
+                else:
+                    node = "N" + str(node_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+                print("You have set node to  " + str(node) + "  !")
+            else:
+                print("wrong input! Want int")     
+
+        button_start_end = QPushButton('Start DAQ', self)
+        button_start_end.resize(100,40)
+        button_start_end.move(250,360)
+        button_start_end.clicked.connect(lambda: start_DAQ())
+        def start_DAQ():
+            print('-------------DAQ Clicked-------------')
+            if (port_exist == False):
+                print("USB not inserted, cannot go to timed version!")
+            else:
+                global mode
+                if mode != "TimedStream":
+                    mode = "TimedStream"
+                    print("Now we are going to switch mode to a timed streaming mode!")
+                    button_start_end.setText("Stop DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread_timed()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+                elif mode == "TimedStream":
+                    mode = "contious_stream"
+                    print("You have stopped DAQ and jumped to contious streaming mode!")
+                    button_start_end.setText("Start DAQ")
+                    self.thread.stop()
+                    self.thread = VideoThread()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+
+
+class SubParameterGUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Camera Parameter Setting")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.setMinimumWidth(365)
+        self.setMinimumHeight(290)
+
+        # create boxs for saving object parameters
+        box_emiss = QLineEdit('Emiss', self)
+        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
+        box_emiss.resize(70,30)
+        box_emiss.move(20,20)
+        box_emiss.returnPressed.connect(lambda: save_emiss())
+        def save_emiss():
+            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
+                global Emiss
+                Emiss = float(box_emiss.text())
+                print("You have set Emiss to  " + str(Emiss) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_trefl = QLineEdit('TRefl', self)
+        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
+        box_trefl.resize(70,30)
+        box_trefl.move(20,60)
+        box_trefl.returnPressed.connect(lambda: save_trefl())
+        def save_trefl():
+            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
+                global TRefl
+                TRefl = float(box_trefl.text())
+                print("You have set TRefl to  " + str(TRefl) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_tatm = QLineEdit('TAtm', self)
+        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatm.resize(70,30)
+        box_tatm.move(20,100)
+        box_tatm.returnPressed.connect(lambda: save_tatm())
+        def save_tatm():
+            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
+                global TAtm
+                TAtm = float(box_tatm.text())
+                print("You have set TAtm to  " + str(TAtm) + "  !")
+                global TAtmC
+                TAtmC = TAtm - 273.15
+                print("You have also set TAtm to  " + str(TAtmC) + "  !")
+                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
+                global ExtOpticsTemp
+                ExtOpticsTemp = TAtm
+                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
+            else:
+                print("wrong input! Want float")
+
+        box_tatmc = QLineEdit('TAtmC', self)
+        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
+        box_tatmc.resize(70,30)
+        box_tatmc.move(20,140)
+        box_tatmc.returnPressed.connect(lambda: save_tatmc())
+        def save_tatmc():
+            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
+                global TAtmC
+                TAtmC = float(box_tatmc.text())
+                print("You have set TAtmC to  " + str(TAtmC) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_humidity = QLineEdit('Humidity', self)
+        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
+        box_humidity.resize(70,30)
+        box_humidity.move(20,180)
+        box_humidity.returnPressed.connect(lambda: save_humidity())
+        def save_humidity():
+            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
+                global Humidity
+                Humidity = float(box_humidity.text())
+                print("You have set Humidity to  " + str(Humidity) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_dist = QLineEdit('Dist', self)
+        box_dist.setAlignment(QtCore.Qt.AlignCenter)
+        box_dist.resize(70,30)
+        box_dist.move(20,220)
+        box_dist.returnPressed.connect(lambda: save_dist())
+        def save_dist():
+            if re.match("^\d+(\.\d+)?$", box_dist.text()):
+                global Dist
+                Dist = float(box_dist.text())
+                print("You have set Dist to  " + str(Dist) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
+        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTransmission.resize(150,30)
+        box_extOpticsTransmission.move(180,20)
+        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
+        def save_extOpticsTransmission():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
+                global ExtOpticsTransmission
+                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
+                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
+            else:
+                print("wrong input! Want float")
+
+        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
+        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
+        box_extOpticsTemp.resize(150,30)
+        box_extOpticsTemp.move(180,60)
+        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
+        def save_extOpticsTemp():
+            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
+                global ExtOpticsTemp
+                ExtOpticsTemp = float(box_extOpticsTemp.text())
+                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
+            else:
+                print("wrong input! Want float")        
+
 if __name__=="__main__":
     app = QApplication(sys.argv)
     a = App()

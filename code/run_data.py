@@ -24,14 +24,7 @@ elif (len(sys.argv) == 2):
         
         if i > 0:
             cur_frame = np.squeeze(data[i,:,:])
-            # previous_frame = np.squeeze(data[i-1,:,:])
-            # frame_diff = cur_frame - previous_frame
-            # print('per frame: {0}, cross frame: {1}'.format(max(cur_frame)-min(cur_frame), max(frame_diff)))
-        # cur_frame = np.squeeze(data[i,:,:])
-        # cur_frame = (30 - cur_frame) / 10
             plt.imshow(cur_frame)
-
-            # plt.hist(frame_diff.reshape(640*480,1),range=(-500,500),bins=[-500,-300,-50,50,300,500])
             plt.pause(0.05)
             plt.clf()
 
@@ -39,11 +32,3 @@ elif (len(sys.argv) == 2):
             plt.close('all')
             break
     plt.show()
-
-    # fig,ax = plt.subplots()
-    # fig.frameon = False
-    # fig.facecolor = 'none'
-    # fig.suptitle("Data Video Replay")
-
-    # ani = animation.FuncAnimation(fig, update_frame, frames=range(data.shape[0]), interval=33, fargs=(data,ax))
-    # plt.show()
