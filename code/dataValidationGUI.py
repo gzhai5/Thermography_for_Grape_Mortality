@@ -5,6 +5,7 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel, QLineEdit, QPushButton, QListWidget, QCheckBox, QFileDialog, QMessageBox, QProgressBar, QHBoxLayout, QGridLayout
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import Qt
+import csv
 
 class VideoPlayer:
     def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label):
@@ -82,6 +83,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Video Player")
         self.setGeometry(100, 100, 800, 600)
+        self.setMinimumWidth(1350)
+        self.setMinimumHeight(700)
 
         # Create widgets
         self.folder_lineedit = QLineEdit()
@@ -96,11 +99,15 @@ class MainWindow(QMainWindow):
         self.checkbox2 = QCheckBox("Checkbox 2")
         self.checkbox3 = QCheckBox("Checkbox 3")
         self.progress_bar = QProgressBar()
+        self.add_results_button = QPushButton("Add Results")
+        self.generate_csv_button = QPushButton("Generate CSV")
 
         # Connect signals to slots
         self.browse_button.clicked.connect(self.browse_folder)
         self.file_list.itemClicked.connect(self.load_video)
         self.run_pause_button.clicked.connect(self.toggle_playback)
+        self.add_results_button.clicked.connect(self.add_results)
+        self.generate_csv_button.clicked.connect(self.generate_csv)
 
         # Create layout
         main_layout = QHBoxLayout()
@@ -125,6 +132,8 @@ class MainWindow(QMainWindow):
         info_layout.addWidget(self.checkbox1, 5, 0)
         info_layout.addWidget(self.checkbox2, 6, 0)
         info_layout.addWidget(self.checkbox3, 7, 0)
+        info_layout.addWidget(self.add_results_button, 8, 0)
+        info_layout.addWidget(self.generate_csv_button, 8, 1)
 
         main_layout.addLayout(video_layout)
         main_layout.addLayout(info_layout)
@@ -136,7 +145,8 @@ class MainWindow(QMainWindow):
 
         # Initialize video player
         self.video_player = None
-        self.video_paused = False
+        self.video_paused = True
+        self.csv_data = [] 
 
     def browse_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -153,6 +163,18 @@ class MainWindow(QMainWindow):
         video_path = os.path.join(self.folder_lineedit.text(), item.text())
         self.video_player = VideoPlayer(video_path, self.video_label, self.progress_bar, self.cultivar_label, self.branch_label, self.node_label)
         self.video_player.play_video()
+        self.csv_data = []
+
+    def update_csv_data(self):
+        if self.video_player:
+            filename = os.path.basename(self.video_player.video_path)
+            checkbox1_state = self.checkbox1.isChecked()
+            checkbox2_state = self.checkbox2.isChecked()
+            checkbox3_state = self.checkbox3.isChecked()
+            checkbox1_result = "good" if checkbox1_state else "bad"
+            checkbox2_result = "good" if checkbox2_state else "bad"
+            checkbox3_result = "good" if checkbox3_state else "bad"
+            self.csv_data.append([filename, checkbox1_result, checkbox2_result, checkbox3_result])
 
     def toggle_playback(self):
         if self.video_player:
@@ -161,6 +183,25 @@ class MainWindow(QMainWindow):
             else:
                 self.run_pause_button.setText("Pause")
             self.video_paused = not self.video_paused
+
+    def add_results(self):
+        self.update_csv_data()
+        print("Results added to CSV list.")
+
+    def generate_csv(self):
+        # Open a file dialog to choose the save location for the CSV file
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", "", "CSV Files (*.csv)")
+        if save_path:
+            try:
+                # Write the CSV file
+                with open(save_path, "w", newline="") as csv_file:
+                    writer = csv.writer(csv_file)
+                    writer.writerow(["Filename", "Checkbox 1", "Checkbox 2", "Checkbox 3"])  # Write header row
+                    writer.writerows(self.csv_data)  # Write data rows
+
+                QMessageBox.information(self, "CSV Generated", "CSV file generated successfully.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An error occurred while generating the CSV file:\n{str(e)}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
