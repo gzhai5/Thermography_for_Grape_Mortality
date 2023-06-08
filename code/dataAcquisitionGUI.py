@@ -845,7 +845,7 @@ class DAQ_GUI(QWidget):
                     branch = "B0" + str(branch_num)
                 else:
                     branch = "B" + str(branch_num)
-                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
+                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
                 print("You have set branch to  " + str(branch) + "  !")
             else:
                 print("wrong input! Want int")

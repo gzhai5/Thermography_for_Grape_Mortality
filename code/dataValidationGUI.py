@@ -20,6 +20,7 @@ class VideoPlayer:
         self.cultivar_label = cultivar_label
         self.branch_label = branch_label
         self.node_label = node_label
+        self.filename = None
 
     def parse_filename(self, filename):
         parts = filename.split("_")
@@ -50,6 +51,7 @@ class VideoPlayer:
     def play_video(self):
         try:
             cultivar_name, branch, node = self.parse_filename(os.path.basename(self.video_path))
+            self.filename = os.path.basename(self.video_path)
             self.cultivar_label.setText(cultivar_name)
             self.branch_label.setText(str(branch))
             self.node_label.setText(str(node))
@@ -192,7 +194,8 @@ class MainWindow(QMainWindow):
 
     def generate_csv(self):
         # Open a file dialog to choose the save location for the CSV file
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", "", "CSV Files (*.csv)")
+        default_file_name = os.path.splitext(self.video_player.filename)[0] + ".csv"
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", default_file_name, "CSV Files (*.csv)")
         if save_path:
             try:
                 # Write the CSV file
