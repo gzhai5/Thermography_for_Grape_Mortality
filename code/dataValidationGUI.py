@@ -179,8 +179,10 @@ class MainWindow(QMainWindow):
     def toggle_playback(self):
         if self.video_player:
             if self.video_paused:
+                self.video_player.video_paused = True
                 self.run_pause_button.setText("Run")
             else:
+                self.video_player.video_paused = False
                 self.run_pause_button.setText("Pause")
             self.video_paused = not self.video_paused
 
