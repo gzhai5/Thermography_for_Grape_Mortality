@@ -337,6 +337,8 @@ class VideoThread_timed(QThread):
                 global branch_num, node_num, branch, node, save_file_name
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
                 print("going to conduct data acquisition on " + cultivar + " cultivar of branch (" + branch + ") and node (" + node + ")")
+                save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+                print("and save the data into " + save_file_name)
 
                 # save down parameters in .cfg in the same directory of where image data saved
                 config = configparser.ConfigParser()
@@ -413,7 +415,7 @@ class VideoThread_timed(QThread):
 
                             # update branch and node indexs for the next
                             if node_num == 99:
-                                node_num = 0
+                                node_num = 1
                                 branch_num += 1
                             else:
                                 node_num += 1
