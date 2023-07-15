@@ -154,14 +154,16 @@ class MainWindow(QMainWindow):
 
         # Initialize video player
         self.video_player = None
-        self.video_paused = True
-        self.csv_data = [] 
+        self.csv_data = []
+
+        # local variables
+        self.folder_path = None
 
     def browse_folder(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if folder_path:
-            self.folder_lineedit.setText(folder_path)
-            self.load_file_list(folder_path)
+        self.folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if self.folder_path:
+            self.folder_lineedit.setText(self.folder_path)
+            self.load_file_list(self.folder_path)
 
     def load_file_list(self, folder_path):
         self.file_list.clear()
@@ -187,13 +189,12 @@ class MainWindow(QMainWindow):
 
     def toggle_playback(self):
         if self.video_player:
-            if self.video_paused:
+            if self.video_player.video_paused == False:
                 self.video_player.video_paused = True
                 self.run_pause_button.setText("Run")
             else:
                 self.video_player.video_paused = False
                 self.run_pause_button.setText("Pause")
-            self.video_paused = not self.video_paused
 
     def add_results(self):
         self.update_csv_data()
@@ -201,7 +202,7 @@ class MainWindow(QMainWindow):
 
     def generate_csv(self):
         # Open a file dialog to choose the save location for the CSV file
-        default_file_name = os.path.splitext(self.video_player.filename)[0] + ".csv"
+        default_file_name = os.path.basename(self.folder_path) + ".csv"
         save_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", default_file_name, "CSV Files (*.csv)")
         if save_path:
             try:
