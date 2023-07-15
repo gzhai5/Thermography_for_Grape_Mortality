@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 import csv
 
 class VideoPlayer:
-    def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label):
+    def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label, app):
         self.video_path = video_path
         self.video_widget = video_widget
         self.frames = np.load(video_path)
@@ -21,6 +21,11 @@ class VideoPlayer:
         self.branch_label = branch_label
         self.node_label = node_label
         self.filename = None
+        self.quit = False
+        app.aboutToQuit.connect(self.stop_playback)
+
+    def stop_playback(self):
+        self.quit = True
 
     def parse_filename(self, filename):
         parts = filename.split("_")
@@ -70,7 +75,7 @@ class VideoPlayer:
         frame_delay = int((1 / frame_rate) * 1000)
 
         # start playing video
-        while self.current_frame < self.num_frames:
+        while self.current_frame < self.num_frames and not self.quit:
             frame = self.frames[self.current_frame]
             frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -158,6 +163,21 @@ class MainWindow(QMainWindow):
 
         # local variables
         self.folder_path = None
+        self.temp_file_path = "./validate.param.temp.txt"
+
+        # check the temp file, if exist, load it content to the csv_data
+        if os.path.exists(self.temp_file_path):
+            try:
+                with open(self.temp_file_path, mode='r') as temp_file:
+                    reader = csv.reader(temp_file)
+                    self.csv_data = list(reader)
+            except Exception as e:
+                print("Error loading temp file: {}".format(e))
+
+    # close GUI
+    def closeEvent(self, event):
+        self.clean_temp_param(self.temp_file_path)
+        event.accept()
 
     def browse_folder(self):
         self.folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -172,7 +192,7 @@ class MainWindow(QMainWindow):
 
     def load_video(self, item):
         video_path = os.path.join(self.folder_lineedit.text(), item.text())
-        self.video_player = VideoPlayer(video_path, self.video_label, self.progress_bar, self.cultivar_label, self.branch_label, self.node_label)
+        self.video_player = VideoPlayer(video_path, self.video_label, self.progress_bar, self.cultivar_label, self.branch_label, self.node_label, app)
         self.video_player.play_video()
         self.csv_data = []
 
@@ -186,6 +206,28 @@ class MainWindow(QMainWindow):
             checkbox2_result = "damaged" if checkbox2_state else "undamaged"
             checkbox3_result = "damaged" if checkbox3_state else "undamaged"
             self.csv_data.append([filename, checkbox1_result, checkbox2_result, checkbox3_result])
+            self.save_temp_param(self.csv_data, self.temp_file_path)
+
+    # a backup plan for keep saving down param file
+    @staticmethod
+    def save_temp_param(csv_data, temp_file_path):
+        try:
+            with open(temp_file_path, mode='w', newline='') as temp_file:
+                writer = csv.writer(temp_file)
+                writer.writerows(csv_data)
+        except Exception as e:
+            print("Error saving temp file: {}".format(e))
+
+    @staticmethod
+    def clean_temp_param(temp_file_path):
+        if os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+                print("Temp file removed successfully.")
+            except Exception as e:
+                print("Error removing temp file: {}".format(e))
+        else:
+            print("Temp file does not exist.")
 
     def toggle_playback(self):
         if self.video_player:
