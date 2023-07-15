@@ -97,9 +97,9 @@ class MainWindow(QMainWindow):
         self.cultivar_label = QLabel("unknown")
         self.branch_label = QLabel("unknown")
         self.node_label = QLabel("unknown")
-        self.checkbox1 = QCheckBox("Checkbox 1")
-        self.checkbox2 = QCheckBox("Checkbox 2")
-        self.checkbox3 = QCheckBox("Checkbox 3")
+        self.checkbox1 = QCheckBox("Primary Bud Damaged")
+        self.checkbox2 = QCheckBox("Secondary Bud Damaged")
+        self.checkbox3 = QCheckBox("Tertiary Bud Damaged")
         self.progress_bar = QProgressBar()
         self.add_results_button = QPushButton("Add Results")
         self.generate_csv_button = QPushButton("Generate CSV")
@@ -173,9 +173,9 @@ class MainWindow(QMainWindow):
             checkbox1_state = self.checkbox1.isChecked()
             checkbox2_state = self.checkbox2.isChecked()
             checkbox3_state = self.checkbox3.isChecked()
-            checkbox1_result = "good" if checkbox1_state else "bad"
-            checkbox2_result = "good" if checkbox2_state else "bad"
-            checkbox3_result = "good" if checkbox3_state else "bad"
+            checkbox1_result = "damaged" if checkbox1_state else "undamaged"
+            checkbox2_result = "damaged" if checkbox2_state else "undamaged"
+            checkbox3_result = "damaged" if checkbox3_state else "undamaged"
             self.csv_data.append([filename, checkbox1_result, checkbox2_result, checkbox3_result])
 
     def toggle_playback(self):
