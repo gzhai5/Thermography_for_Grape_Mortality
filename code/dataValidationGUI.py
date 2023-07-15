@@ -49,6 +49,8 @@ class VideoPlayer:
         error_box.exec_()
 
     def play_video(self):
+
+        # Parse filename and set labels
         try:
             cultivar_name, branch, node = self.parse_filename(os.path.basename(self.video_path))
             self.filename = os.path.basename(self.video_path)
@@ -59,10 +61,15 @@ class VideoPlayer:
             self.show_error_message(str(e))
             return
         
+        # first freeze the video playing
+        self.video_paused = True
+
+        # settings for video playback
         frame_rate = 30
         actual_frame_rate = self.num_frames / len(self.frames)
         frame_delay = int((1 / frame_rate) * 1000)
 
+        # start playing video
         while self.current_frame < self.num_frames:
             frame = self.frames[self.current_frame]
             frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
