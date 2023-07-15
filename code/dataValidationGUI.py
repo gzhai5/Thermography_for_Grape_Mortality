@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 import csv
 
 class VideoPlayer:
-    def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label, app):
+    def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label):
         self.video_path = video_path
         self.video_widget = video_widget
         self.frames = np.load(video_path)
@@ -21,11 +21,6 @@ class VideoPlayer:
         self.branch_label = branch_label
         self.node_label = node_label
         self.filename = None
-        self.quit = False
-        app.aboutToQuit.connect(self.stop_playback)
-
-    def stop_playback(self):
-        self.quit = True
 
     def parse_filename(self, filename):
         parts = filename.split("_")
@@ -75,7 +70,7 @@ class VideoPlayer:
         frame_delay = int((1 / frame_rate) * 1000)
 
         # start playing video
-        while self.current_frame < self.num_frames and not self.quit:
+        while self.current_frame < self.num_frames:
             frame = self.frames[self.current_frame]
             frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
