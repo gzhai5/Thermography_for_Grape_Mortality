@@ -40,7 +40,7 @@ if node_num < 10:
     node = "N0" + str(node_num)
 else:
     node = "N" + str(node_num)
-save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
 
 # set up the focus step, 100 as a default
 focus_step = 100
@@ -337,7 +337,7 @@ class VideoThread_timed(QThread):
                 global branch_num, node_num, branch, node, save_file_name
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
                 print("going to conduct data acquisition on " + cultivar + " cultivar of branch (" + branch + ") and node (" + node + ")")
-                save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+                save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
                 print("and save the data into " + save_file_name)
 
                 # save down parameters in .cfg in the same directory of where image data saved
@@ -427,7 +427,7 @@ class VideoThread_timed(QThread):
                                 node = "N0" + str(node_num)
                             else:
                                 node = "N" + str(node_num)
-                            save_file_name = cultivar + "_" + branch + "_" + node + "_" + ".npy"
+                            save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
 
                             i = N + 1
                         diff_time = time.time() - start_time
@@ -484,12 +484,135 @@ class App(QMainWindow):
         self.text = QPlainTextEdit()
         self.text.setReadOnly(True)
 
-        # create buttons
-        button_DAQ = QPushButton('DAQ', self)
-        button_DAQ.clicked.connect(self.open_DAQ_window)
-        button_DAQ.resize(80,40)
-        button_DAQ.move(880,30)
+        # set boxes for typing in time, and the last one is for data saving_path
+        label_t0 = QLabel('t0', self)
+        label_t0.move(680, 190)
+        box_t0 = QLineEdit(str(t0), self)
+        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
+        box_t0.resize(40,30)
+        box_t0.move(700,190)
+        box_t0.returnPressed.connect(lambda: save_t0())
+        def save_t0():
+            if re.match("^\d+$", box_t0.text()):
+                global t0
+                t0 = int(box_t0.text())
+                print("You have set t0 to  " + str(t0) + "  !")
+            else:
+                print("wrong input! Want int")
 
+        label_t1 = QLabel('t1', self)
+        label_t1.move(780, 190)
+        box_t1 = QLineEdit(str(t1), self)
+        box_t1.setAlignment(QtCore.Qt.AlignCenter)
+        box_t1.resize(40,30)
+        box_t1.move(800,190)
+        box_t1.returnPressed.connect(lambda: save_t1())
+        def save_t1():
+            if re.match("^\d+$", box_t1.text()):
+                global t1
+                t1 = int(box_t1.text())
+                print("You have set t1 to  " + str(t1) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_t2 = QLabel('t2', self)
+        label_t2.move(880, 190)
+        box_t2 = QLineEdit(str(t2), self)
+        box_t2.setAlignment(QtCore.Qt.AlignCenter)
+        box_t2.resize(40,30)
+        box_t2.move(900,190)
+        box_t2.returnPressed.connect(lambda: save_t2())
+        def save_t2():
+            if re.match("^\d+$", box_t2.text()):
+                global t2
+                t2 = int(box_t2.text())
+                print("You have set t2 to  " + str(t2) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        # for the data saving path and also saved filename
+        box_path = QLineEdit(save_file_name, self)
+        box_path.setAlignment(QtCore.Qt.AlignCenter)
+        box_path.resize(280,30)
+        box_path.move(680,230)
+        box_path.returnPressed.connect(lambda: save_file())
+        def save_file():
+            global save_file_name
+            save_file_name = box_path.text() + ".npy"
+            print("You have choosen " + save_file_name + " as the saved npy filename")
+
+        button_path = QPushButton("Data Saving Folder", self)
+        button_path.resize(280,30)
+        button_path.move(680,270)
+        button_path.clicked.connect(lambda: save_path())
+        def save_path():
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
+            global Saved_Folder
+            Saved_Folder = directory
+            print("Choose Download Directory:  " +Saved_Folder)
+
+        label_cultivar = QLabel('Cultivar', self)
+        label_cultivar.move(680,305)
+        box_cultivar = QLineEdit(cultivar, self)
+        box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
+        box_cultivar.resize(70,30)
+        box_cultivar.move(750,305)
+        box_cultivar.returnPressed.connect(lambda: save_cultivar())
+        def save_cultivar():
+            global cultivar
+            cultivar = box_cultivar.text()
+            box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
+            print("You have set cultivar to  " + cultivar + "  !")
+
+        label_branch = QLabel('Branch', self)
+        label_branch.move(680,340)
+        box_branch = QLineEdit(str(branch_num), self)
+        box_branch.setAlignment(QtCore.Qt.AlignCenter)
+        box_branch.resize(70,30)
+        box_branch.move(750,340)
+        box_branch.returnPressed.connect(lambda: save_branch())
+        def save_branch():
+            if re.match("^\d+$", box_branch.text()):
+                if int(box_branch.text()) < 0 or int(box_branch.text()) > 99:
+                    print("wrong input for branch number! Want int between 0 and 99.")
+                    return
+                global branch_num, branch
+                branch_num = int(box_branch.text())
+                if branch_num < 10:
+                    branch = "B0" + str(branch_num)
+                else:
+                    branch = "B" + str(branch_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
+                print("You have set branch to  " + str(branch) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        label_node = QLabel('Node', self)
+        label_node.move(840, 340)
+        box_node = QLineEdit(str(node_num), self)
+        box_node.setAlignment(QtCore.Qt.AlignCenter)
+        box_node.resize(70,30)
+        box_node.move(885,340)
+        box_node.returnPressed.connect(lambda: save_node())
+        def save_node():
+            if re.match("^\d+$", box_node.text()):
+                if int(box_node.text()) < 0 or int(box_node.text()) > 99:
+                    print("wrong input for node number! Want int between 0 and 99.")
+                    return
+                global node_num, node
+                node_num = int(box_node.text())
+                if node_num < 10:
+                    node = "N0" + str(node_num)
+                else:
+                    node = "N" + str(node_num)
+                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
+                print("You have set node to  " + str(node) + "  !")
+            else:
+                print("wrong input! Want int")
+
+        # create buttons
         button_connect = QPushButton('Connect', self)
         button_connect.clicked.connect(self.click_connect)
         button_connect.resize(80,40)
@@ -498,7 +621,7 @@ class App(QMainWindow):
         button_disconnect = QPushButton('Cut', self)
         button_disconnect.clicked.connect(self.click_disconnect)
         button_disconnect.resize(80,40)
-        button_disconnect.move(780,30)
+        button_disconnect.move(880,30)
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
@@ -521,7 +644,7 @@ class App(QMainWindow):
         combo_box_autofocus_method.setCurrentIndex(0)
         combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
         combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(680,140)
+        combo_box_autofocus_method.move(680,135)
 
         # combo_box_pixelformat_method = QComboBox(self)
         # options_pf = ["Mono8", "Mono16"]
@@ -542,7 +665,7 @@ class App(QMainWindow):
         box_focus_step = QLineEdit('Focus Step', self)
         box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
         box_focus_step.resize(90,40)
-        box_focus_step.move(880,140)
+        box_focus_step.move(875,135)
         box_focus_step.returnPressed.connect(lambda: save_focus_step())
         def save_focus_step():
             if re.match("^\d+$", box_focus_step.text()):
@@ -553,8 +676,8 @@ class App(QMainWindow):
                 print("wrong input! Want int")
 
         button_parameter = QPushButton('Set Parameters', self)
-        button_parameter.resize(280,35)
-        button_parameter.move(680,255)
+        button_parameter.resize(280,30)
+        button_parameter.move(680,410)
         button_parameter.clicked.connect(lambda: click_button_parameter())
         def click_button_parameter():
             if self.subParametersWindow is None:
@@ -562,8 +685,8 @@ class App(QMainWindow):
             self.subParametersWindow.show()
 
         button_start_end = QPushButton('Start DAQ', self)
-        button_start_end.resize(280,40)
-        button_start_end.move(680,300)
+        button_start_end.resize(280,30)
+        button_start_end.move(680,375)
         button_start_end.clicked.connect(lambda: start_DAQ())
         def start_DAQ():
             print('-------------DAQ Clicked-------------')
@@ -635,11 +758,6 @@ class App(QMainWindow):
             if sep:                         # New line if LF
                 cur.insertBlock()
         self.textbox.setTextCursor(cur)     # Update visible cursor
-
-    def open_DAQ_window(self):
-        if self.DAQ_window is None:    
-            self.DAQ_window = DAQ_GUI()
-        self.DAQ_window.show()
 
     def click_connect(self):
         print('-------------Connect Clicked-------------')
@@ -734,152 +852,7 @@ class App(QMainWindow):
             bytes_per_line = ch * w
             convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
-
-class DAQ_GUI(QWidget):  
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Data Acquistion Setting")
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-        self.setMinimumWidth(360)
-        self.setMinimumHeight(410)
-
-        # set boxes for typing in time, and the last one is for data saving_path
-        label_t0 = QLabel('t0', self)
-        label_t0.move(20, 20)
-        box_t0 = QLineEdit(str(t0), self)
-        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
-        box_t0.resize(40,30)
-        box_t0.move(40,20)
-        box_t0.returnPressed.connect(lambda: save_t0())
-        def save_t0():
-            if re.match("^\d+$", box_t0.text()):
-                global t0
-                t0 = int(box_t0.text())
-                print("You have set t0 to  " + str(t0) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_t1 = QLabel('t1', self)
-        label_t1.move(120, 20)
-        box_t1 = QLineEdit(str(t1), self)
-        box_t1.setAlignment(QtCore.Qt.AlignCenter)
-        box_t1.resize(40,30)
-        box_t1.move(140,20)
-        box_t1.returnPressed.connect(lambda: save_t1())
-        def save_t1():
-            if re.match("^\d+$", box_t1.text()):
-                global t1
-                t1 = int(box_t1.text())
-                print("You have set t1 to  " + str(t1) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_t2 = QLabel('t2', self)
-        label_t2.move(220, 20)
-        box_t2 = QLineEdit(str(t2), self)
-        box_t2.setAlignment(QtCore.Qt.AlignCenter)
-        box_t2.resize(40,30)
-        box_t2.move(240,20)
-        box_t2.returnPressed.connect(lambda: save_t2())
-        def save_t2():
-            if re.match("^\d+$", box_t2.text()):
-                global t2
-                t2 = int(box_t2.text())
-                print("You have set t2 to  " + str(t2) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        # for the data saving path and also saved filename
-        label_filename = QLabel('Data Name', self)
-        label_filename.move(120, 60)
-        box_path = QLineEdit(save_file_name, self)
-        box_path.setAlignment(QtCore.Qt.AlignCenter)
-        box_path.resize(280,30)
-        box_path.move(20,90)
-        box_path.returnPressed.connect(lambda: save_file())
-        def save_file():
-            global save_file_name
-            save_file_name = box_path.text() + ".npy"
-            print("You have choosen " + save_file_name + " as the saved npy filename")
-
-        button_path = QPushButton("Data Saving Folder", self)
-        button_path.resize(280,30)
-        button_path.move(20,120)
-        button_path.clicked.connect(lambda: save_path())
-        def save_path():
-            options = QFileDialog.Options()
-            options |= QFileDialog.DontUseNativeDialog
-            directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
-            global Saved_Folder
-            Saved_Folder = directory
-            print("Choose Download Directory:  " +Saved_Folder)
-
-        label_cultivar = QLabel('Cultivar', self)
-        label_cultivar.move(30,160)
-        box_cultivar = QLineEdit(cultivar, self)
-        box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
-        box_cultivar.resize(70,30)
-        box_cultivar.move(100,160)
-        box_cultivar.returnPressed.connect(lambda: save_cultivar())
-        def save_cultivar():
-            global cultivar
-            cultivar = box_cultivar.text()
-            box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
-            print("You have set cultivar to  " + cultivar + "  !")
-
-        label_branch = QLabel('Branch', self)
-        label_branch.move(30,200)
-        box_branch = QLineEdit(str(branch_num), self)
-        box_branch.setAlignment(QtCore.Qt.AlignCenter)
-        box_branch.resize(70,30)
-        box_branch.move(100,200)
-        box_branch.returnPressed.connect(lambda: save_branch())
-        def save_branch():
-            if re.match("^\d+$", box_branch.text()):
-                if int(box_branch.text()) < 0 or int(box_branch.text()) > 99:
-                    print("wrong input for branch number! Want int between 0 and 99.")
-                    return
-                global branch_num, branch
-                branch_num = int(box_branch.text())
-                if branch_num < 10:
-                    branch = "B0" + str(branch_num)
-                else:
-                    branch = "B" + str(branch_num)
-                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
-                print("You have set branch to  " + str(branch) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_node = QLabel('Node', self)
-        label_node.move(30, 240)
-        box_node = QLineEdit(str(node_num), self)
-        box_node.setAlignment(QtCore.Qt.AlignCenter)
-        box_node.resize(70,30)
-        box_node.move(100,240)
-        box_node.returnPressed.connect(lambda: save_node())
-        def save_node():
-            if re.match("^\d+$", box_node.text()):
-                if int(box_node.text()) < 0 or int(box_node.text()) > 99:
-                    print("wrong input for node number! Want int between 0 and 99.")
-                    return
-                global node_num, node
-                node_num = int(box_node.text())
-                if node_num < 10:
-                    node = "N0" + str(node_num)
-                else:
-                    node = "N" + str(node_num)
-                box_path.setText(cultivar + "_" + branch + "_" + node + "_" + ".npy")
-                print("You have set node to  " + str(node) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        # while True:
-        #     box_cultivar.setText(cultivar)
-        #     box_branch.setText(str(branch_num))
-        #     box_node.setText(str(node_num))
-        #     box_path.setText(save_file_name)     
+        return QPixmap.fromImage(p)   
 
 
 class SubParameterGUI(QWidget):
