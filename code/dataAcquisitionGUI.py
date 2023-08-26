@@ -36,6 +36,7 @@ if branch_num < 10:
 else:
     branch = "B" + str(branch_num)
 node_num = 1
+node_num_upper_limit = 99
 if node_num < 10:
     node = "N0" + str(node_num)
 else:
@@ -414,7 +415,7 @@ class VideoThread_timed(QThread):
                             print("Data saved into   " + save_file_name)
 
                             # update branch and node indexs for the next
-                            if node_num == 99:
+                            if node_num == node_num_upper_limit:
                                 node_num = 1
                                 branch_num += 1
                             else:
@@ -975,7 +976,20 @@ class SubParameterGUI(QWidget):
                 ExtOpticsTemp = float(box_extOpticsTemp.text())
                 print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
             else:
-                print("wrong input! Want float")        
+                print("wrong input! Want float")
+
+        box_node_num_upper_limit = QLineEdit('Node UpperLimit', self)
+        box_node_num_upper_limit.setAlignment(QtCore.Qt.AlignCenter)
+        box_node_num_upper_limit.resize(150,30)
+        box_node_num_upper_limit.move(180,100)
+        box_node_num_upper_limit.returnPressed.connect(lambda: save_node_num_upper_limit())
+        def save_node_num_upper_limit():
+            if re.match("^\d+$", box_node_num_upper_limit.text()):
+                global node_num_upper_limit
+                node_num_upper_limit = int(box_node_num_upper_limit.text())
+                print("You have set the upper limit of node number to  " + str(node_num_upper_limit) + "  !")
+            else:
+                print("wrong input! Want Int")        
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
