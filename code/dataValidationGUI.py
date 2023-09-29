@@ -1,14 +1,17 @@
 import sys
 import os, time
+import logging
 import cv2
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel, QLineEdit, QPushButton, QListWidget, QCheckBox, QFileDialog, QMessageBox, QProgressBar, QHBoxLayout, QGridLayout
 from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtCore import Qt
 import csv
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class VideoPlayer:
     def __init__(self, video_path, video_widget, progress_bar, cultivar_label, branch_label, node_label):
+        self.running = True
         self.video_path = video_path
         self.video_widget = video_widget
         self.frames = np.load(video_path)
@@ -70,16 +73,20 @@ class VideoPlayer:
         frame_delay = int((1 / frame_rate) * 1000)
 
         # start playing video
-        while self.current_frame < self.num_frames:
+        while self.current_frame < self.num_frames and self.running:
             frame = self.frames[self.current_frame]
             frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
             image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
             pixmap = QPixmap.fromImage(image)
             self.video_widget.setPixmap(pixmap)
-            self.progress_bar.setValue(int(self.current_frame * 100 / self.num_frames))
+
+            if self.current_frame >= self.num_frames - 1:
+                self.progress_bar.setValue(100)
+            else:
+                self.progress_bar.setValue(int(self.current_frame * 100 / self.num_frames))
+            
             QApplication.processEvents()
-            cv2.waitKey(1)
             
             if not self.video_paused:
                 self.current_frame += 1
@@ -167,10 +174,12 @@ class MainWindow(QMainWindow):
                     reader = csv.reader(temp_file)
                     self.csv_data = list(reader)
             except Exception as e:
-                print("Error loading temp file: {}".format(e))
+                logging.error("Error loading temp file: %s", e)
 
     # close GUI
     def closeEvent(self, event):
+        if self.video_player:
+            self.video_player.running = False
         self.clean_temp_param(self.temp_file_path)
         event.accept()
 
@@ -187,7 +196,11 @@ class MainWindow(QMainWindow):
 
     def load_video(self, item):
         video_path = os.path.join(self.folder_lineedit.text(), item.text())
-        self.video_player = VideoPlayer(video_path, self.video_label, self.progress_bar, self.cultivar_label, self.branch_label, self.node_label, app)
+        self.video_player = VideoPlayer(video_path, self.video_label, 
+                                        self.progress_bar, self.cultivar_label, 
+                                        self.branch_label, self.node_label)
+        self.video_player.video_paused = True
+        self.run_pause_button.setText("Run")
         self.video_player.play_video()
         self.csv_data = []
 
@@ -211,18 +224,18 @@ class MainWindow(QMainWindow):
                 writer = csv.writer(temp_file)
                 writer.writerows(csv_data)
         except Exception as e:
-            print("Error saving temp file: {}".format(e))
+            logging.error("Error saving temp file: %s", e)
 
     @staticmethod
     def clean_temp_param(temp_file_path):
         if os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
-                print("Temp file removed successfully.")
+                logging.info("Temp file removed successfully.")
             except Exception as e:
-                print("Error removing temp file: {}".format(e))
+                logging.error("Error removing temp file: %s", e)
         else:
-            print("Temp file does not exist.")
+            logging.info("Temp file does not exist, no need for recovery.")
 
     def toggle_playback(self):
         if self.video_player:
@@ -235,7 +248,7 @@ class MainWindow(QMainWindow):
 
     def add_results(self):
         self.update_csv_data()
-        print("Results added to CSV list.")
+        logging.info("Results added to CSV list.")
 
     def generate_csv(self):
         # Open a file dialog to choose the save location for the CSV file
