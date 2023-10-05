@@ -3,10 +3,9 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWin
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
-import PySpin, serial, pyfirmata
-import os, keyboard, time, base64, sys, cv2, re, configparser
+import PySpin, pyfirmata
+import os, time, sys, cv2, re, configparser
 from PIL import Image, ImageDraw
-from skimage import img_as_ubyte
 
 
 # switch initilization
@@ -28,7 +27,7 @@ N = t2*fps
 img_data_array = np.zeros((N,480,640))
 
 # set up the saving path and saved filename for the data
-Saved_Folder = "C:/Users/Alfoul/Desktop/Thermography_for_Grape_Mortality/code/SavedData/"
+Saved_Folder = os.path.abspath(__file__)
 cultivar = "unknown"
 branch_num = 1
 if branch_num < 10:
