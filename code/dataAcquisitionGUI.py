@@ -41,6 +41,7 @@ if node_num < 10:
 else:
     node = "N" + str(node_num)
 save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
+DAQ_running_flag = False
 
 # set up the focus step, 100 as a default
 focus_step = 100
@@ -334,7 +335,7 @@ class VideoThread_timed(QThread):
                     print('K2 =', K2)
 
                 # about to run
-                global branch_num, node_num, branch, node, save_file_name
+                global branch_num, node_num, branch, node, save_file_name, DAQ_running_flag
                 print("Now we have t0 =  " + str(t0) + "  , t1 =  " + str(t1) + "  t2 =  " + str(t2))
                 print("going to conduct data acquisition on " + cultivar + " cultivar of branch (" + branch + ") and node (" + node + ")")
                 save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
@@ -363,7 +364,7 @@ class VideoThread_timed(QThread):
                 N = t2*fps
                 img_data_array = np.zeros((N,480,640))
 
-                while(self._run_flag):
+                while(DAQ_running_flag):
                     try:
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
@@ -430,6 +431,9 @@ class VideoThread_timed(QThread):
                             save_file_name = cultivar + "_" + branch + "_" + node + ".npy"
 
                             i = N + 1
+                            
+                            DAQ_running_flag = False
+
                         diff_time = time.time() - start_time
                         if (diff_time >= t0 and diff_time < t1):
                             # ser.write(some_bytes1)
@@ -693,12 +697,13 @@ class App(QMainWindow):
             if (port_exist == False):
                 print("USB not inserted, cannot go to timed version!")
             else:
-                global mode
+                global mode, DAQ_running_flag
                 if mode != "TimedStream":
                     mode = "TimedStream"
                     print("Now we are going to switch mode to a timed streaming mode!")
                     button_start_end.setText("Stop DAQ")
                     self.thread.stop()
+                    DAQ_running_flag = True
                     self.thread = VideoThread_timed()
                     self.thread.change_pixmap_signal.connect(self.update_image)
                     self.thread.start()
@@ -707,6 +712,7 @@ class App(QMainWindow):
                     print("You have stopped DAQ and jumped to contious streaming mode!")
                     button_start_end.setText("Start DAQ")
                     self.thread.stop()
+                    DAQ_running_flag = False
                     self.thread = VideoThread()
                     self.thread.change_pixmap_signal.connect(self.update_image)
                     self.thread.start()               
