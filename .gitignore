@@ -5,3 +5,5 @@
 /code/SavedData
 /code/offsets
 /code/csv_data
+*.npy
+*.cfg

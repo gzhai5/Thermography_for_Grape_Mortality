@@ -27,7 +27,8 @@ N = t2*fps
 img_data_array = np.zeros((N,480,640))
 
 # set up the saving path and saved filename for the data
-Saved_Folder = os.path.abspath(__file__)
+this_file = os.path.abspath(__file__)
+Saved_Folder = os.path.dirname(this_file)
 cultivar = "unknown"
 branch_num = 1
 if branch_num < 10:
