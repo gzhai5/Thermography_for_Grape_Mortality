@@ -24,7 +24,7 @@ mode = "disconnect"   # set the initial mode to disconnect
 t0, t1, t2 = 1, 10, 20
 fps = 30
 N = t2*fps
-img_data_array = np.zeros((N,480,640))
+img_data_array = np.zeros((N,480,640), dtype=np.uint16)
 
 # set up the saving path and saved filename for the data
 this_file = os.path.abspath(__file__)
@@ -373,6 +373,8 @@ class VideoThread_timed(QThread):
                             # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                   
                             image_data = image_result.GetNDArray()
+                            print('Type of image_data 1:', image_data.dtype)
+                            print('Shape of image_data 1:', image_data.shape)
 
                             # depending on different irformattype
                             if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
@@ -405,13 +407,17 @@ class VideoThread_timed(QThread):
                         if (i < N):
                             img_data_array[i] = image_data
                             # print("Now, You have passed  " + str(i) + "  images!")
+                            print('Type of image_data 2:', image_data.dtype)
+                            print('Shape of image_data 2:', image_data.shape)
                             i = i + 1
                         if (i == N):
                             print("Now, You have passed  " + str(i) + "  images!")
                             print("DAQ finished!")
 
                             # # save the image content array to a npy file
-                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array)   
+                            print('Type of image_data 3:', image_data.dtype)
+                            print('Shape of image_data 3:', image_data.shape)
+                            np.save(os.path.join(Saved_Folder, save_file_name),img_data_array.astype(np.uint16))   
                             print("------------Image Contents Saved------------")
                             print("Data saved into   " + save_file_name)
 
