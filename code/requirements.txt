@@ -17,5 +17,4 @@ PyQt5-sip==12.12.2
 pyserial==3.5
 python-dateutil==2.8.2
 six==1.16.0
-spinnaker-python @ file:///C:/Users/Public/Documents/spinnaker_sdk/spinnaker_python-2.7.0.128-cp38-cp38-win_amd64.whl#sha256=411ba83b7af90e03aacaaffede25a7570379eb63a94d901827337ac6d3a2844d
 zipp==3.17.0

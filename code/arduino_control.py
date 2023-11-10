@@ -1,10 +1,10 @@
 import pyfirmata
 import time
 
-port = 'COM4'
+port = 'COM3'
 relay_pin = 12
 try:
-    board = pyfirmata.Arduino('COM4')
+    board = pyfirmata.Arduino('COM3')
 except IOError:
     print("Ardino not found connected at port " + port)
 

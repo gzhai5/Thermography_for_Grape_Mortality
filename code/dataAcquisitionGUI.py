@@ -9,11 +9,11 @@ from PIL import Image, ImageDraw
 
 
 # switch initilization
-port = 'COM4'
+port = 'COM3'
 relay_pin = 12
 port_exist = True
 try:
-    board = pyfirmata.Arduino('COM4')
+    board = pyfirmata.Arduino('COM3')
 except IOError:
     print("USB port not Found")
     port_exist = False
