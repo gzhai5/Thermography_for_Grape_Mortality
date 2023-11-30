@@ -2,6 +2,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog, QComboBox, QListView
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtMultimedia import QSound
 import numpy as np
 import PySpin, pyfirmata
 import os, time, sys, cv2, re, configparser
@@ -36,7 +37,7 @@ if branch_num < 10:
 else:
     branch = "B" + str(branch_num)
 node_num = 1
-node_num_upper_limit = 99
+node_num_upper_limit = 9
 if node_num < 10:
     node = "N0" + str(node_num)
 else:
@@ -199,6 +200,10 @@ class VideoThread_timed(QThread):
     def __init__(self):
         super().__init__()
         self._run_flag = True
+        self.finish_sound = QSound("./static/success_sound.wav")
+
+    def play_sound(self):
+        self.finish_sound.play()
 
     def run(self):
         system = PySpin.System.GetInstance()
@@ -434,6 +439,7 @@ class VideoThread_timed(QThread):
                             i = N + 1
                             
                             DAQ_running_flag = False
+                            self.play_sound()
 
                         diff_time = time.time() - start_time
                         if (diff_time >= t0 and diff_time < t1):
@@ -689,34 +695,11 @@ class App(QMainWindow):
                 self.subParametersWindow = SubParameterGUI()
             self.subParametersWindow.show()
 
-        button_start_end = QPushButton('Start DAQ', self)
-        button_start_end.resize(280,30)
-        button_start_end.move(680,375)
-        button_start_end.clicked.connect(lambda: start_DAQ())
-        def start_DAQ():
-            print('-------------DAQ Clicked-------------')
-            if (port_exist == False):
-                print("USB not inserted, cannot go to timed version!")
-            else:
-                global mode, DAQ_running_flag
-                if mode != "TimedStream":
-                    mode = "TimedStream"
-                    print("Now we are going to switch mode to a timed streaming mode!")
-                    button_start_end.setText("Stop DAQ")
-                    self.thread.stop()
-                    DAQ_running_flag = True
-                    self.thread = VideoThread_timed()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()
-                elif mode == "TimedStream":
-                    mode = "contious_stream"
-                    print("You have stopped DAQ and jumped to contious streaming mode!")
-                    button_start_end.setText("Start DAQ")
-                    self.thread.stop()
-                    DAQ_running_flag = False
-                    self.thread = VideoThread()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()               
+        self.button_start_end = QPushButton('Start DAQ', self)
+        self.button_start_end.resize(280,30)
+        self.button_start_end.move(680,375)
+        self.button_start_end.clicked.connect(self.start_DAQ)
+                
 
         # create the main window
         self.vlayout = QVBoxLayout()        
@@ -830,11 +813,41 @@ class App(QMainWindow):
             node_autofocus_method_fine = node_autofocus_method.GetEntryByName('Fine')
             node_autofocus_method.SetIntValue(node_autofocus_method_fine.GetValue())
 
+    def start_DAQ(self):
+            print('-------------DAQ Clicked-------------')
+            if (port_exist == False):
+                print("USB not inserted, cannot go to timed version!")
+            else:
+                global mode, DAQ_running_flag
+                if mode != "TimedStream":
+                    mode = "TimedStream"
+                    print("Now we are going to switch mode to a timed streaming mode!")
+                    self.button_start_end.setText("Stop DAQ")
+                    self.thread.stop()
+                    DAQ_running_flag = True
+                    self.thread = VideoThread_timed()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+                elif mode == "TimedStream":
+                    mode = "contious_stream"
+                    print("You have stopped DAQ and jumped to contious streaming mode!")
+                    self.button_start_end.setText("Start DAQ")
+                    self.thread.stop()
+                    DAQ_running_flag = False
+                    self.thread = VideoThread()
+                    self.thread.change_pixmap_signal.connect(self.update_image)
+                    self.thread.start()
+
     def write(self, text):
         self.text_update.emit(str(text))
 
     def flush(self):
         pass
+    
+    # Replace 'S' with your desired key
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_S:
+            self.start_DAQ()
 
     def closeEvent(self, event):
         self.thread.stop()
