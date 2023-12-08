@@ -846,7 +846,7 @@ class App(QMainWindow):
     
     # Replace 'S' with your desired key
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_S:
+        if event.key() == Qt.Key_Space:
             self.start_DAQ()
 
     def closeEvent(self, event):
