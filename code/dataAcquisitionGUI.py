@@ -559,7 +559,7 @@ class App(QMainWindow):
         def save_path():
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            directory = QFileDialog.getExistingDirectory(self, "QFileDialog..getExistingDirectory()", "", options=options)
+            directory = QFileDialog.getExistingDirectory(self, "Select Path", Saved_Folder, options=options)
             global Saved_Folder
             Saved_Folder = directory
             print("Choose Download Directory:  " +Saved_Folder)
