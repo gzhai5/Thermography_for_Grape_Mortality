@@ -29,7 +29,7 @@ img_data_array = np.zeros((N,480,640), dtype=np.uint16)
 
 # set up the saving path and saved filename for the data
 this_file = os.path.abspath(__file__)
-Saved_Folder = "D:/"
+Saved_Folder = "F:/"
 cultivar = "unknown"
 branch_num = 1
 if branch_num < 10:
