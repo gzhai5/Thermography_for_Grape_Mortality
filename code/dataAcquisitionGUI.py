@@ -844,7 +844,7 @@ class App(QMainWindow):
     def flush(self):
         pass
     
-    # Replace 'S' with your desired key
+    # Replace 'Space' with your desired key
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
             self.start_DAQ()
