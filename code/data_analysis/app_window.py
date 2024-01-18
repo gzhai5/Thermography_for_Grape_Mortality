@@ -16,8 +16,12 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
 
         # Other variables
         self.data = None
+        self.previous_avg_plots = []
+        self.previous_std_plots = []
+        self.filename = ""
         self.show_std_points = True
         self.show_heatmap_flag = False
+        self.multi_plot_mode = False
         self.current_folder = ""
         self.current_frame_index = 0
         self.params = ExperimentParameter()
@@ -59,6 +63,11 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.checkbox2.setEnabled(False)
         self.checkbox2.stateChanged.connect(self.show_heatmap)
         self.checkbox_layout.addWidget(self.checkbox2)
+        self.checkbox3 = QtWidgets.QCheckBox("Multi-Plot Enabled")
+        self.checkbox3.setChecked(False)
+        self.checkbox3.setEnabled(False)
+        self.checkbox3.stateChanged.connect(self.multi_plot_enable)
+        self.checkbox_layout.addWidget(self.checkbox3)
         left_top_layout.addLayout(self.checkbox_layout)
 
         frame_buttons_layout = QtWidgets.QHBoxLayout()
@@ -175,13 +184,14 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         # Load selected .npy file and display first frame
         selected_item = self.npy_list_widget.currentItem()
         if selected_item:
-            file_name = selected_item.text()
-            file_path = os.path.join(self.current_folder, file_name)
+            self.filename = selected_item.text()
+            file_path = os.path.join(self.current_folder, self.filename)
             self.refresh()
             self.load_image(file_path)
             self.progress_bar.setEnabled(True)
             self.checkbox1.setEnabled(True)
             self.checkbox2.setEnabled(True)
+            self.checkbox3.setEnabled(True)
             self.threshold_input.setReadOnly(False)
             self.threshold_input.setText(f"{self.params.threshold}")
             self.top_n_input.setReadOnly(False)
@@ -230,7 +240,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             self.image_canvas.axes.plot(selected_x_coords, selected_y_coords, 'bs', markersize=point_edge_length)  # Plot with blue dots
 
             for idx, (x, y) in enumerate(self.params.selected_points):
-                self.image_canvas.axes.text(x, y, str(idx), color='orange', fontsize=8, ha='right', va='bottom')
+                self.image_canvas.axes.text(x, y, str(idx+1), color='orange', fontsize=8, ha='right', va='bottom')
 
         self.image_canvas.axes.axis('off')
         self.image_canvas.axes.set_title(f"Frame {self.current_frame_index} of the Raw Video Data")
@@ -300,30 +310,50 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.show_heatmap_flag = (state == QtCore.Qt.Checked)
         self.update_image_display()
 
+    def multi_plot_enable(self, state):
+        # Toggle multi-plot mode
+        self.multi_plot_mode = (state == QtCore.Qt.Checked)
+
     def update_plots(self):
         if not self.params.selected_points:
             return
         
         # Extract mean and standard deviation values for selected points
         mean_curves, std_curves = extract_mean_val(self.params.selected_points, self.data, self.params.selected_point_radius)
+        
+        # Prepare new plot data
+        frame_indices = np.arange(len(mean_curves[0]))
+        time_points = frame_indices / self.params.fps
+        print(self.filename)
+        new_avg_plot_data = [(time_points, curve, f"{i+1}st selected pt in {self.filename}" if i == 0 else f"{i+1}th selected pt in {self.filename}") for i, curve in enumerate(mean_curves)]
+        new_std_plot_data = [(time_points, curve, f"{i+1}st selected pt in {self.filename}" if i == 0 else f"{i+1}th selected pt in {self.filename}") for i, curve in enumerate(std_curves)]
 
         # Clear existing plots
         self.avg_plot_canvas.axes.clear()
         self.std_plot_canvas.axes.clear()
 
+        # Check multi plot mode
+        if self.multi_plot_mode:
+            # Append new data to previous data
+            self.previous_avg_plots.extend(new_avg_plot_data)
+            self.previous_std_plots.extend(new_std_plot_data)
+        else:
+            # Clear previous data
+            self.previous_avg_plots = new_avg_plot_data
+            self.previous_std_plots = new_std_plot_data
+            # Clear existing plots
+            self.avg_plot_canvas.axes.clear()
+            self.std_plot_canvas.axes.clear()
+
         # Plotting mean curves
-        frame_indices = np.arange(len(mean_curves[0]))
-        time_points = frame_indices / self.params.fps
-        for i, curve in enumerate(mean_curves):
-            label = f"{i+1}st selected point" if i == 0 else f"{i+1}th selected point"
+        for time_points, curve, label in self.previous_avg_plots:
             self.avg_plot_canvas.axes.plot(time_points, curve, label=label)
         self.avg_plot_canvas.axes.set_ylabel('Average Temperature')
         self.avg_plot_canvas.axes.set_title('Mean Temperature over Time')
         self.avg_plot_canvas.axes.legend()
 
         # Plotting standard deviation curves
-        for i, curve in enumerate(std_curves):
-            label = f"{i+1}st selected point" if i == 0 else f"{i+1}th selected point"
+        for time_points, curve, label in self.previous_std_plots:
             self.std_plot_canvas.axes.plot(time_points, curve, label=label)
         self.std_plot_canvas.axes.set_ylabel('Standard Deviation')
         self.std_plot_canvas.axes.set_xlabel('Time')
