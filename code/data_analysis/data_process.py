@@ -46,3 +46,5 @@ def extract_mean_val(pixels: list, data: np.ndarray, radius: int):
         mean_curves.append(mean_curve)
         std_curves.append(std_curve)
     return mean_curves, std_curves
+
+

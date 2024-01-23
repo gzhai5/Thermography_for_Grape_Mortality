@@ -1,4 +1,5 @@
 import time
+import pandas as pd
 from PyQt5 import QtWidgets, QtCore
 from mpl_canvas import MplCanvas
 from experiment_params import ExperimentParameter
@@ -22,9 +23,11 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.show_std_points = True
         self.show_heatmap_flag = False
         self.multi_plot_mode = False
+        self.label = True
         self.current_folder = ""
         self.current_frame_index = 0
         self.params = ExperimentParameter()
+        self.csv_path = 'roi_data.csv'
 
         # Main layout
         central_widget = QtWidgets.QWidget()
@@ -128,12 +131,24 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.radius_input.setReadOnly(True)
         self.radius_input.textChanged.connect(self.radius_change)
 
+        self.label_checkbox = QtWidgets.QCheckBox("Alive?")
+        self.label_checkbox.setChecked(True)
+        self.label_checkbox.setEnabled(False)
+        self.label_checkbox.stateChanged.connect(self.label_checkbox_change)
+
+        self.save_button = QtWidgets.QPushButton("Save")
+        self.save_button.setEnabled(False)
+        self.save_button.clicked.connect(self.save_roi_data)
+
         buttons_layout.addWidget(self.threshold_title)
         buttons_layout.addWidget(self.threshold_input)
         buttons_layout.addWidget(self.top_n_title)
         buttons_layout.addWidget(self.top_n_input)
         buttons_layout.addWidget(self.radius_title)
         buttons_layout.addWidget(self.radius_input)
+        buttons_layout.addWidget(self.label_checkbox)
+        buttons_layout.addWidget(self.save_button)
+        buttons_layout.setSpacing(20)
         control_layout.addLayout(buttons_layout)
         grid_layout.addLayout(control_layout, 0, 1, 2, 1)
 
@@ -164,6 +179,43 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             self.update_raw_image_display(select_point_changed=True)
             self.radius_input.setText(f"{value}")
             self.update_plots()
+
+    def save_roi_data(self):
+        # Initialize the list to store all the data
+        all_data = []
+
+        if len(self.params.selected_points) != 1:
+            print("Error: More than one point or no point selected")
+            return
+        
+        x_coor = int(self.params.selected_points[0][0])
+        y_coor = int(self.params.selected_points[0][1])
+
+        # Extract the ROI
+        region = self.data[:, 
+                            max(y_coor - self.params.selected_point_radius, 0):min(y_coor + self.params.selected_point_radius + 1, self.data.shape[1]),
+                            max(x_coor - self.params.selected_point_radius, 0):min(x_coor + self.params.selected_point_radius + 1, self.data.shape[2])]
+
+        # Iterate through each pixel in the ROI
+        for i in range(region.shape[1]):
+            for j in range(region.shape[2]):
+                # Extract the time series data for the current pixel
+                pixel_data = region[:, i, j]
+                all_data.append(pixel_data)
+
+        # Read the local csv file or create a new one
+        if os.path.exists(self.csv_path):
+            existing_data = pd.read_csv(self.csv_path)
+        else:
+            column_names = ['filename'] + [f'Pixel_{i+1}' for i in range(len(all_data))] + ['Label', 'Breed']
+            existing_data = pd.DataFrame(columns=column_names)
+
+        # Create a new row for the current data
+        new_row = [self.filename] + list(all_data) + [self.label, self.get_breed(self.filename)]
+        existing_data.loc[len(existing_data)] = new_row
+        
+        # Save the updated DataFrame to the csv file
+        existing_data.to_csv(self.csv_path, index=False)
 
     def open_folder(self):
         # Open folder dialog
@@ -199,6 +251,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             self.radius_input.setReadOnly(False)
             self.radius_input.setText(f"{self.params.selected_point_radius}")
             self.next_button.setEnabled(True)
+            self.label_checkbox.setEnabled(True)
 
     def load_image(self, file_path):
         # Load and display image from .npy file
@@ -212,6 +265,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
 
     def on_image_click(self, x, y):
         self.params.selected_points.append((x, y))
+        self.save_button.setEnabled(True)
         self.revert_button.setEnabled(True)
         self.update_plots()
         self.update_raw_image_display(select_point_changed=True)
@@ -280,6 +334,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             self.update_raw_image_display(select_point_changed=True)
         else:
             self.revert_button.setEnabled(False)
+            self.save_button.setEnabled(False)
 
     def keyPressEvent(self, event):
         modifiers = event.modifiers()
@@ -313,6 +368,10 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
     def multi_plot_enable(self, state):
         # Toggle multi-plot mode
         self.multi_plot_mode = (state == QtCore.Qt.Checked)
+
+    def label_checkbox_change(self, state):
+        # Toggle label checkbox
+        self.label = (state == QtCore.Qt.Checked)
 
     def update_plots(self):
         if not self.params.selected_points:
@@ -363,3 +422,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         # Redraw the plots
         self.avg_plot_canvas.draw()
         self.std_plot_canvas.draw()
+
+    @staticmethod
+    def get_breed(filename: str):
+        return filename.split('_')[0]
