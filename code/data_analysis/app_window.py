@@ -1,6 +1,7 @@
 import time
 import pandas as pd
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtMultimedia import QSound
 from mpl_canvas import MplCanvas
 from experiment_params import ExperimentParameter
 from data_process import find_top_sensitive_pixels, extract_mean_val
@@ -196,26 +197,28 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
                             max(y_coor - self.params.selected_point_radius, 0):min(y_coor + self.params.selected_point_radius + 1, self.data.shape[1]),
                             max(x_coor - self.params.selected_point_radius, 0):min(x_coor + self.params.selected_point_radius + 1, self.data.shape[2])]
 
-        # Iterate through each pixel in the ROI
-        for i in range(region.shape[1]):
-            for j in range(region.shape[2]):
-                # Extract the time series data for the current pixel
-                pixel_data = region[:, i, j]
-                all_data.append(pixel_data)
+        # Iterate through each frame
+        for frame in range(region.shape[0]):
+            # Extract the 7x7 region for the current frame and reshape to 7x7x1
+            frame_data = region[frame, :, :].reshape(region.shape[1], region.shape[2], 1)
+            all_data.append(frame_data)
 
         # Read the local csv file or create a new one
         if os.path.exists(self.csv_path):
             existing_data = pd.read_csv(self.csv_path)
         else:
-            column_names = ['filename'] + [f'Pixel_{i+1}' for i in range(len(all_data))] + ['Label', 'Breed']
+            column_names = ['filename', 'Label', 'Breed'] + [f'Frame_{i+1}' for i in range(region.shape[0])]
             existing_data = pd.DataFrame(columns=column_names)
 
-        # Create a new row for the current data
-        new_row = [self.filename] + list(all_data) + [self.label, self.get_breed(self.filename)]
-        existing_data.loc[len(existing_data)] = new_row
+        # Add the new data to the DataFrame
+        new_data = [self.filename, self.label, self.get_breed(self.filename)]
+        for frame_data in all_data:
+            new_data.append(frame_data)
+        existing_data.loc[len(existing_data)] = new_data
         
         # Save the updated DataFrame to the csv file
         existing_data.to_csv(self.csv_path, index=False)
+        self.play_sound()
 
     def open_folder(self):
         # Open folder dialog
@@ -337,14 +340,23 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             self.save_button.setEnabled(False)
 
     def keyPressEvent(self, event):
-        modifiers = event.modifiers()
-        if modifiers == QtCore.Qt.ControlModifier or modifiers == QtCore.Qt.MetaModifier:
-            if event.key() == QtCore.Qt.Key_Z:
-                print("Ctrl + Z pressed")
-                self.revert_point_selection()
+        if event.key() == QtCore.Qt.Key_Z:
+            print("Ctrl + Z pressed")
+            self.revert_point_selection()
         elif event.key() == QtCore.Qt.Key_Space:
             print("Space pressed")
             self.next_file()
+        elif event.key() == QtCore.Qt.Key_A:
+            print("A pressed")
+            self.label = not self.label
+            self.label_checkbox.setChecked(self.label)
+        elif event.key() == QtCore.Qt.Key_S:
+            print("S pressed")
+            self.save_roi_data()
+
+    def play_sound(self):
+        finish_sound = QSound("../static/signal.wav")
+        finish_sound.play()
 
     def next_file(self):
         # Load next .npy file
