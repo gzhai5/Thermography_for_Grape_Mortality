@@ -865,17 +865,33 @@ class App(QMainWindow):
         self.image_label.setPixmap(qt_img)
     
     def convert_cv_qt(self, cv_img):
-        """Convert from an opencv image to QPixmap"""
+        """Convert from an opencv image to QPixmap and draw lines"""
         if len(cv_img.shape) == 2:
             rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
-            convert_to_Qt_format = QtGui.QImage(rgb_image.data,cv_img.shape[1],cv_img.shape[0],0,QtGui.QImage.Format_RGB888)
         else:
             rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb_image.shape
-            bytes_per_line = ch * w
-            convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+
+        # Draw lines on the image
+        height, width, channels = rgb_image.shape
+        center_x, center_y = width // 2, height // 2
+
+        # Color for the lines (red in this case), adjust as needed
+        line_color = (255, 0, 0)  # Red color in BGR
+        thickness = 2  # Line thickness
+
+        # Drawing vertical line
+        cv2.line(rgb_image, (center_x, 0), (center_x, height), line_color, thickness)
+        # Drawing horizontal line
+        cv2.line(rgb_image, (0, center_y), (width, center_y), line_color, thickness)
+
+        if len(cv_img.shape) == 2:
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data, cv_img.shape[1], cv_img.shape[0], 0, QtGui.QImage.Format_RGB888)
+        else:
+            bytes_per_line = channels * width
+            convert_to_Qt_format = QtGui.QImage(rgb_image.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888)
+
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)   
+        return QPixmap.fromImage(p)
 
 
 class SubParameterGUI(QWidget):
