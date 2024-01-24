@@ -636,6 +636,7 @@ class App(QMainWindow):
 
         button_autofocus = QPushButton('Auto', self)
         button_autofocus.clicked.connect(self.click_autofocus)
+        button_autofocus.setFocusPolicy(Qt.NoFocus)
         button_autofocus.resize(80,40)
         button_autofocus.move(680,80)
 
@@ -848,6 +849,8 @@ class App(QMainWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
             self.start_DAQ()
+        elif event.key() == Qt.Key_A:
+            self.click_autofocus()
 
     def closeEvent(self, event):
         self.thread.stop()
