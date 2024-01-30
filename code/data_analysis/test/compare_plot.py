@@ -22,7 +22,7 @@ def select_pixel(image, file_name):
                 ax.plot(event.xdata, event.ydata, 'ro')
                 fig.canvas.draw()
 
-    # Connect the click event to the onclick function
+    # connect the click event to the onclick function
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     key_cid = fig.canvas.mpl_connect('key_press_event', onclick)
 
@@ -70,37 +70,35 @@ def plot_combined_curves(mean_curves, std_curves, split_index):
     plt.tight_layout()
     plt.show()
 
-def normalize_curves_using_min(curves):
-    normalized_curves = []
-    for curve in curves:
-        min_val = np.min(curve)
-        normalized_curve = curve - min_val
-        normalized_curves.append(normalized_curve)
-    return normalized_curves
+def normalize_curves(curves):
+    min_values = [np.min(curve) for curve in curves]
+    min_value = np.min(min_values)
+    return [curve - np.min(curve) + min_value for curve in curves]
 
 
 def main():
     # Load data
     data_filepaths = [
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B01_N01.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B03_N06.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B04_N05.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B17_N07.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B22_N04.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B26_N05.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B29_N04.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B29_N06.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B14_N07.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B21_N08.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B08_N06.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con2.0_B25_N09.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con_2.1_F_B37_N06.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con_2.1_F_B35_N07.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con_2.1_F_B38_N03.npy',
-                        '/Volumes/My Book Duo/Bud Thermography Data/Con_2.1_F_B44_N09.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N01.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N02.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N03.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N05.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N06.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N07.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N08.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.0_B01_N09.npy',
+
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N01.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N02.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N03.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N04.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N05.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N06.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N07.npy',
+                        '/Volumes/My Book Duo/Bud Thermography Data/CF3.1F_B31_N08.npy',
                     ]
     
-    extraction_region_radius = 3
+    extraction_region_radius = 5
     mean_curves = []
     std_curves = []
 
