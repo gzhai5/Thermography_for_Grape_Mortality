@@ -7,3 +7,9 @@
 /code/csv_data
 *.npy
 *.cfg
+
+# python cache
+__pycache__/
+
+# data files
+*.csv
