@@ -28,7 +28,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.current_folder = ""
         self.current_frame_index = 0
         self.params = ExperimentParameter()
-        self.csv_path = 'roi_data.csv'
+        self.csv_path = 'roi_data_pn_3.csv'
 
         # Main layout
         central_widget = QtWidgets.QWidget()
@@ -280,7 +280,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
     def update_raw_image_display(self, select_point_changed=False):
         frame = self.data[self.current_frame_index]
         self.image_canvas.axes.clear()  # Clear previous image/points
-        self.image_canvas.axes.imshow(frame, cmap='gray')  # Display current frame
+        self.image_canvas.axes.imshow(frame, cmap='hot')  # Display current frame
 
         if self.show_std_points:
             top_points = find_top_sensitive_pixels(self.data, self.params.interested_points_num,
