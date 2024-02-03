@@ -6,8 +6,11 @@ def process_csv(input_file, output_file):
 
     # get the min value of rows for Label == True and Label == False
     true_count = len(df[df['Label'] == True])
+    print('True count:', true_count)
     false_count = len(df[df['Label'] == False])
+    print('False count:', false_count)
     min_count = min(true_count, false_count)
+    print('Min count:', min_count)
 
     # Filter rows where Label is True and False
     true_rows = df[df['Label'] == True].sample(min_count)
@@ -20,6 +23,6 @@ def process_csv(input_file, output_file):
     combined_rows.to_csv(output_file, index=False)
 
 # Example usage
-input_file = '../roi_data_pn_3.csv'
-output_file = '../roi_data_pn_3_processed.csv'
+input_file = '../roi_data_pn_2.csv'
+output_file = '../roi_data_pn_2_processed.csv'
 process_csv(input_file, output_file)

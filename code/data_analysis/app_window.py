@@ -28,7 +28,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         self.current_folder = ""
         self.current_frame_index = 0
         self.params = ExperimentParameter()
-        self.csv_path = 'roi_data_pn_3.csv'
+        self.csv_path = 'roi_data_pn_2.csv'
 
         # Main layout
         central_widget = QtWidgets.QWidget()
