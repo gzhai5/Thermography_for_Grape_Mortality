@@ -23,6 +23,6 @@ def process_csv(input_file, output_file):
     combined_rows.to_csv(output_file, index=False)
 
 # Example usage
-input_file = '../roi_data_con_3.csv'
-output_file = '../roi_data_con_3_processed.csv'
+input_file = '../roi_data_cf_3.csv'
+output_file = '../roi_data_cf_3_processed.csv'
 process_csv(input_file, output_file)
