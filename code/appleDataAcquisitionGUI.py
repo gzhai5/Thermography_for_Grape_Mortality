@@ -155,7 +155,10 @@ class VideoThread(QThread):
             cam.DeInit()
         del cam
         cam_list.Clear()
-        system.ReleaseInstance()            
+        try:
+            system.ReleaseInstance()
+        except Exception as e:
+            print('an release error occurred', e)           
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
@@ -168,10 +171,6 @@ class VideoThread_timed(QThread):
     def __init__(self):
         super().__init__()
         self._run_flag = True
-        self.finish_sound = QSound("./static/success_sound.wav")
-
-    def play_sound(self):
-        self.finish_sound.play()
 
     def run(self):
         system = PySpin.System.GetInstance()
@@ -248,9 +247,10 @@ class VideoThread_timed(QThread):
                             # save the image data into .raw files
                             if index >= (image_interval * fps):
                                 index = 0
-                                filename = "img_" + str(int(time.time())) + ".raw"
-                                with open(filename, "wb") as f:
-                                    f.write(image_data.tobytes())
+                                filename = "img_" + str(int(time.time())) + ".tiff"
+                                #with open(filename, "wb") as f:
+                                    #f.write(image_data.tobytes())
+                                Image.fromarray(image_data).save(filename)
                                 print("One image frame is saved")
 
 
