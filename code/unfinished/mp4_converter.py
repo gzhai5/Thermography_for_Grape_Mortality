@@ -32,6 +32,6 @@ def npy_to_mp4(npy_file, output_file, fps=24):
     imageio.mimwrite(output_file, frame_list, fps=fps)
 
 # Example usage
-npy_file_path = './CW_C3_B3.npy'
-output_file_path = 'c3b3.mp4'
+npy_file_path = '/Users/mud/Desktop/test_data/Ries_B28_N03.npy'
+output_file_path = 'Ries_B28_N03.mp4'
 npy_to_mp4(npy_file_path, output_file_path)
