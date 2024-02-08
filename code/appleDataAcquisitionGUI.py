@@ -12,14 +12,14 @@ from PIL import Image, ImageDraw
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
 t0, t1, t2 = 1, 10, 20
-fps = 30
+fps = 60
 image_interval = 60
 N = t2*fps
-img_data_array = np.zeros((N,480,640), dtype=np.uint16)
 
 # set up the saving path and saved filename for the data
 this_file = os.path.abspath(__file__)
 Saved_Folder = "F:/"
+save_file_name = ""
 
 # set up the focus step, 100 as a default
 focus_step = 100
@@ -86,17 +86,9 @@ class VideoThread(QThread):
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
             # ensure the pixel format = mono8 for streaming
             node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
-            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
+            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono14'))
             node_pixel_format_mono8 = node_pixel_format_mono8.GetValue()
             node_pixel_format.SetIntValue(node_pixel_format_mono8)
-
-            CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
-            J1 = CalibrationQueryJ1_node.GetValue()
-            # print('Gain =', J1)
-
-            CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
-            J0 = CalibrationQueryJ0_node.GetValue()
-            # print('Offset =', J0)
 
             # test ir format settings
             node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
@@ -138,25 +130,14 @@ class VideoThread(QThread):
                     device_serial_number = node_device_serial_number.GetValue()
                     print('Device serial number retrieved as %s...' % device_serial_number)
 
-                index = 0
                 while(self._run_flag):
                     try:
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
-                            print("image incomplete")
+                            print("")
+                            # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
                         else:                    
                             image_data = image_result.GetNDArray()
-                            index += 1
-
-                            # save the image data into .raw files
-                            if index % image_interval == 0:
-                                index = 0
-                                filename = "img_" + str(int(time.time())) + ".raw"
-                                with open(filename, "wb") as f:
-                                    f.write(image_data.tobytes())
-                                pass
-
-
                             image_data_d = image_data
                             image_data_dt = image_data_d
                             image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
@@ -209,17 +190,9 @@ class VideoThread_timed(QThread):
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
             # ensure the pixel format = mono8 for streaming
             node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
-            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
+            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono14'))
             node_pixel_format_mono8 = node_pixel_format_mono8.GetValue()
             node_pixel_format.SetIntValue(node_pixel_format_mono8)
-
-            CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
-            J1 = CalibrationQueryJ1_node.GetValue()
-            # print('Gain =', J1)
-
-            CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
-            J0 = CalibrationQueryJ0_node.GetValue()
-            # print('Offset =', J0)
 
             # test ir format settings
             node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
@@ -261,14 +234,26 @@ class VideoThread_timed(QThread):
                     device_serial_number = node_device_serial_number.GetValue()
                     print('Device serial number retrieved as %s...' % device_serial_number)
 
+                index = 0
                 while(self._run_flag):
+                    print('index:', index)
                     try:
                         image_result = cam.GetNextImage(1000)
                         if image_result.IsIncomplete():
-                            print("")
-                            # print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
+                            print("image incomplete")
                         else:                    
                             image_data = image_result.GetNDArray()
+                            index += 1
+
+                            # save the image data into .raw files
+                            if index >= (image_interval * fps):
+                                index = 0
+                                filename = "img_" + str(int(time.time())) + ".raw"
+                                with open(filename, "wb") as f:
+                                    f.write(image_data.tobytes())
+                                print("One image frame is saved")
+
+
                             image_data_d = image_data
                             image_data_dt = image_data_d
                             image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
@@ -389,64 +374,8 @@ class App(QMainWindow):
             Saved_Folder = directory
             print("Choose Download Directory:  " +Saved_Folder)
 
-        label_cultivar = QLabel('Cultivar', self)
-        label_cultivar.move(680,305)
-        box_cultivar = QLineEdit(cultivar, self)
-        box_cultivar.setAlignment(QtCore.Qt.AlignCenter)
-        box_cultivar.resize(70,30)
-        box_cultivar.move(750,305)
-        box_cultivar.returnPressed.connect(lambda: save_cultivar())
-        def save_cultivar():
-            global cultivar
-            cultivar = box_cultivar.text()
-            box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
-            print("You have set cultivar to  " + cultivar + "  !")
-
-        label_branch = QLabel('Branch', self)
-        label_branch.move(680,340)
-        box_branch = QLineEdit(str(branch_num), self)
-        box_branch.setAlignment(QtCore.Qt.AlignCenter)
-        box_branch.resize(70,30)
-        box_branch.move(750,340)
-        box_branch.returnPressed.connect(lambda: save_branch())
-        def save_branch():
-            if re.match("^\d+$", box_branch.text()):
-                if int(box_branch.text()) < 0 or int(box_branch.text()) > 99:
-                    print("wrong input for branch number! Want int between 0 and 99.")
-                    return
-                global branch_num, branch
-                branch_num = int(box_branch.text())
-                if branch_num < 10:
-                    branch = "B0" + str(branch_num)
-                else:
-                    branch = "B" + str(branch_num)
-                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
-                print("You have set branch to  " + str(branch) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_node = QLabel('Node', self)
-        label_node.move(840, 340)
-        box_node = QLineEdit(str(node_num), self)
-        box_node.setAlignment(QtCore.Qt.AlignCenter)
-        box_node.resize(70,30)
-        box_node.move(885,340)
-        box_node.returnPressed.connect(lambda: save_node())
-        def save_node():
-            if re.match("^\d+$", box_node.text()):
-                if int(box_node.text()) < 0 or int(box_node.text()) > 99:
-                    print("wrong input for node number! Want int between 0 and 99.")
-                    return
-                global node_num, node
-                node_num = int(box_node.text())
-                if node_num < 10:
-                    node = "N0" + str(node_num)
-                else:
-                    node = "N" + str(node_num)
-                box_path.setText(cultivar + "_" + branch + "_" + node + ".npy")
-                print("You have set node to  " + str(node) + "  !")
-            else:
-                print("wrong input! Want int")
+        
+        
 
         # create buttons
         button_connect = QPushButton('Connect', self)
@@ -597,11 +526,12 @@ class App(QMainWindow):
         print('-------------Autofocus Clicked-------------')
         system = PySpin.System.GetInstance()
         camera = system.GetCameras()[0]
-        # camera.Init()
+        print('camera', camera)
         nodemap = camera.GetNodeMap()
+        print('!nodemap', nodemap)
         node_autofocus = PySpin.CCommandPtr(nodemap.GetNode('AutoFocus'))
+        print('!autofocus', node_autofocus)
         node_autofocus.Execute()
-        # camera.DeInit()
 
     def click_focusplus(self):
         print("-------------Plus " + str(focus_step) + " Focus-------------")
@@ -641,28 +571,25 @@ class App(QMainWindow):
 
     def start_DAQ(self):
             print('-------------DAQ Clicked-------------')
-            if (port_exist == False):
-                print("USB not inserted, cannot go to timed version!")
-            else:
-                global mode, DAQ_running_flag
-                if mode != "TimedStream":
-                    mode = "TimedStream"
-                    print("Now we are going to switch mode to a timed streaming mode!")
-                    self.button_start_end.setText("Stop DAQ")
-                    self.thread.stop()
-                    DAQ_running_flag = True
-                    self.thread = VideoThread_timed()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()
-                elif mode == "TimedStream":
-                    mode = "contious_stream"
-                    print("You have stopped DAQ and jumped to contious streaming mode!")
-                    self.button_start_end.setText("Start DAQ")
-                    self.thread.stop()
-                    DAQ_running_flag = False
-                    self.thread = VideoThread()
-                    self.thread.change_pixmap_signal.connect(self.update_image)
-                    self.thread.start()
+            global mode, DAQ_running_flag
+            if mode != "TimedStream":
+                mode = "TimedStream"
+                print("Now we are going to switch mode to a timed streaming mode!")
+                self.button_start_end.setText("Stop DAQ")
+                self.thread.stop()
+                DAQ_running_flag = True
+                self.thread = VideoThread_timed()
+                self.thread.change_pixmap_signal.connect(self.update_image)
+                self.thread.start()
+            elif mode == "TimedStream":
+                mode = "contious_stream"
+                print("You have stopped DAQ and jumped to contious streaming mode!")
+                self.button_start_end.setText("Start DAQ")
+                self.thread.stop()
+                DAQ_running_flag = False
+                self.thread = VideoThread()
+                self.thread.change_pixmap_signal.connect(self.update_image)
+                self.thread.start()
 
     def write(self, text):
         self.text_update.emit(str(text))
@@ -705,9 +632,9 @@ class App(QMainWindow):
         thickness = 2  # Line thickness
 
         # Drawing vertical line
-        cv2.line(rgb_image, (center_x, 0), (center_x, height), line_color, thickness)
+        # cv2.line(rgb_image, (center_x, 0), (center_x, height), line_color, thickness)
         # Drawing horizontal line
-        cv2.line(rgb_image, (0, center_y), (width, center_y), line_color, thickness)
+        # cv2.line(rgb_image, (0, center_y), (width, center_y), line_color, thickness)
 
         if len(cv_img.shape) == 2:
             convert_to_Qt_format = QtGui.QImage(rgb_image.data, cv_img.shape[1], cv_img.shape[0], 0, QtGui.QImage.Format_RGB888)
