@@ -2,10 +2,9 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QMainWindow, QTextEdit, QPlainTextEdit, QHBoxLayout, QAction, QPushButton, QLineEdit, QFileDialog, QComboBox, QListView
 from PyQt5.QtGui import QPixmap, QFont, QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
-from PyQt5.QtMultimedia import QSound
 import numpy as np
 import PySpin
-import os, time, sys, cv2, re, configparser
+import os, time, sys, cv2, re
 from PIL import Image, ImageDraw
 
 
@@ -172,6 +171,13 @@ class VideoThread_timed(QThread):
         super().__init__()
         self._run_flag = True
 
+    @staticmethod
+    def flush_buffer_to_file(buffer, file_index):
+        temp_filename = f"apple_data/temp_frames_{file_index}.npy"
+        np.save(temp_filename, np.array(buffer, dtype=object))
+        print(f"Saved buffer to {temp_filename}")
+        return []
+
     def run(self):
         system = PySpin.System.GetInstance()
         cam_list = system.GetCameras()
@@ -234,6 +240,9 @@ class VideoThread_timed(QThread):
                     print('Device serial number retrieved as %s...' % device_serial_number)
 
                 index = 0
+                buffer_size = 20
+                buffer = []
+
                 while(self._run_flag):
                     print('index:', index)
                     try:
@@ -242,20 +251,20 @@ class VideoThread_timed(QThread):
                             print("image incomplete")
                         else:                    
                             image_data = image_result.GetNDArray()
+                            print("image_data shape:", image_data.shape)
+                            print("image_data type:", image_data.dtype)
                             index += 1
 
-                            # save the image data into .raw files
-                            if index >= (image_interval * fps):
-                                index = 0
-                                filename = "img_" + str(int(time.time())) + ".tiff"
-                                #with open(filename, "wb") as f:
-                                    #f.write(image_data.tobytes())
-                                Image.fromarray(image_data).save(filename)
-                                print("One image frame is saved")
+                            # Save every 2nd frame into buffer
+                            if index % 2 == 0:
+                                buffer.append(image_data)
+
+                            # Flush buffer to file when it reaches buffer size
+                            if len(buffer) >= buffer_size:
+                                buffer = self.flush_buffer_to_file(buffer, index)
 
 
                             image_data_d = image_data
-                            image_data_dt = image_data_d
                             image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
                             self.change_pixmap_signal.emit(image_data_dt)                       
                         image_result.Release()
@@ -265,13 +274,34 @@ class VideoThread_timed(QThread):
                         break
                 cam.EndAcquisition()
 
+                # Flush any remaining frames in the buffer
+                if buffer:
+                    self.flush_buffer_to_file(buffer, index)
+
+                # Merging all temp files into a final file
+                all_frames = []
+                for i in range(buffer_size, index + 1, buffer_size):
+                    temp_filename = f"apple_data/temp_frames_{i}.npy"
+                    if os.path.exists(temp_filename):
+                        all_frames.extend(np.load(temp_filename, allow_pickle=True))
+                        os.remove(temp_filename)  # Remove temporary file after loading
+
+                final_filename = "apple_data/continuous_apple_frames.npy"
+                np.save(final_filename, np.array(all_frames, dtype=object))
+                print(f"Final save of all frames to {final_filename}")
+
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 break
+
+        
             cam.DeInit()
         del cam
         cam_list.Clear()
-        system.ReleaseInstance()            
+        try:
+            system.ReleaseInstance()
+        except Exception as e:
+            print('an release error occurred', e)           
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
