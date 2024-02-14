@@ -171,13 +171,6 @@ class VideoThread_timed(QThread):
         super().__init__()
         self._run_flag = True
 
-    @staticmethod
-    def flush_buffer_to_file(buffer, file_index):
-        temp_filename = f"apple_data/temp_frames_{file_index}.npy"
-        np.save(temp_filename, np.array(buffer, dtype=object))
-        print(f"Saved buffer to {temp_filename}")
-        return []
-
     def run(self):
         system = PySpin.System.GetInstance()
         cam_list = system.GetCameras()
@@ -240,7 +233,7 @@ class VideoThread_timed(QThread):
                     print('Device serial number retrieved as %s...' % device_serial_number)
 
                 index = 0
-                buffer_size = 20
+                frames_per_min = 30 * 60
                 buffer = []
 
                 while(self._run_flag):
@@ -255,40 +248,36 @@ class VideoThread_timed(QThread):
                             print("image_data type:", image_data.dtype)
                             index += 1
 
-                            # Save every 2nd frame into buffer
-                            if index % 2 == 0:
+                            # Save every 4th frame into buffer so reduce the outputfps to 15
+                            if index % 4 == 0:
                                 buffer.append(image_data)
 
                             # Flush buffer to file when it reaches buffer size
-                            if len(buffer) >= buffer_size:
-                                buffer = self.flush_buffer_to_file(buffer, index)
+                            if len(buffer) >= frames_per_min:
+                                minute_index = index // (frames_per_min * 2)
+                                temp_filename = f"data_apple_13_22/frames_minute_{minute_index}.npy"
+                                np.save(temp_filename, np.array(buffer, dtype=np.uint16))
+                                print(f"Saved buffer to {temp_filename}")
+                                buffer = []
 
 
                             image_data_d = image_data
+                            image_data_dt = image_data_d
                             image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
                             self.change_pixmap_signal.emit(image_data_dt)                       
                         image_result.Release()
 
                     except PySpin.SpinnakerException as ex:
-                        print('Error: %s' % ex)
+                        print('Error when doing daq: %s' % ex)
                         break
                 cam.EndAcquisition()
 
                 # Flush any remaining frames in the buffer
                 if buffer:
-                    self.flush_buffer_to_file(buffer, index)
-
-                # Merging all temp files into a final file
-                all_frames = []
-                for i in range(buffer_size, index + 1, buffer_size):
-                    temp_filename = f"apple_data/temp_frames_{i}.npy"
-                    if os.path.exists(temp_filename):
-                        all_frames.extend(np.load(temp_filename, allow_pickle=True))
-                        os.remove(temp_filename)  # Remove temporary file after loading
-
-                final_filename = "apple_data/continuous_apple_frames.npy"
-                np.save(final_filename, np.array(all_frames, dtype=object))
-                print(f"Final save of all frames to {final_filename}")
+                    minute_index = index // (frames_per_min * 2)
+                    temp_filename = f"data_apple_13_22/frames_minute_{minute_index}.npy"
+                    np.save(temp_filename, np.array(buffer, dtype=np.uint16))
+                    print(f"Final save of buffer to {temp_filename}")
 
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
