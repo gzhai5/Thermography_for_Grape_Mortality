@@ -139,7 +139,7 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
 
         self.save_button = QtWidgets.QPushButton("Save")
         self.save_button.setEnabled(False)
-        self.save_button.clicked.connect(self.save_roi_data)
+        self.save_button.clicked.connect(self.save_roi_center)
 
         buttons_layout.addWidget(self.threshold_title)
         buttons_layout.addWidget(self.threshold_input)
@@ -220,6 +220,34 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         existing_data.to_csv(self.csv_path, index=False)
         self.play_sound()
 
+    def save_roi_center(self):
+        # Check if exactly one point is selected
+        if len(self.params.selected_points) != 1:
+            print("Error: More than one point or no point selected")
+            return
+
+        # Get the coordinates of the selected point
+        x_coor = int(self.params.selected_points[0][0])
+        y_coor = int(self.params.selected_points[0][1])
+
+        # Prepare the data to be saved
+        new_data = {'filename': self.filename, 'x_coordinate': x_coor, 'y_coordinate': y_coor}
+
+        # Read the local csv file or create a new one
+        if os.path.exists(self.csv_path):
+            existing_data = pd.read_csv(self.csv_path)
+        else:
+            column_names = ['filename', 'Label', 'Breed', 'x_coordinate', 'y_coordinate']
+            existing_data = pd.DataFrame(columns=column_names)
+
+        # Add the new data to the DataFrame
+        new_data = [self.filename, self.label, self.get_breed(self.filename), x_coor, y_coor]
+        existing_data.loc[len(existing_data)] = new_data
+
+        # Save the updated DataFrame to the csv file
+        existing_data.to_csv(self.csv_path, index=False)
+        self.play_sound()
+
     def open_folder(self):
         # Open folder dialog
         folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -294,7 +322,12 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
         if select_point_changed and self.params.selected_points:
             selected_x_coords, selected_y_coords = zip(*self.params.selected_points)
             point_edge_length = 2 * self.params.selected_point_radius * (72 / self.image_canvas.dpi)
-            self.image_canvas.axes.plot(selected_x_coords, selected_y_coords, 'bs', markersize=point_edge_length)  # Plot with blue dots
+            # Plot with hollow squares
+            self.image_canvas.axes.plot(selected_x_coords, selected_y_coords, 's', 
+                                        markersize=point_edge_length, 
+                                        markerfacecolor='none',  # No fill color
+                                        markeredgecolor='b',     # Blue edge color
+                                        markeredgewidth=1)       # Width of the edge
 
             for idx, (x, y) in enumerate(self.params.selected_points):
                 self.image_canvas.axes.text(x, y, str(idx+1), color='orange', fontsize=8, ha='right', va='bottom')
@@ -350,9 +383,12 @@ class ThermalAnalysisApp(QtWidgets.QMainWindow):
             print("A pressed")
             self.label = not self.label
             self.label_checkbox.setChecked(self.label)
+        elif event.key() == QtCore.Qt.Key_K:
+            print("K pressed")
+            self.save_roi_data()
         elif event.key() == QtCore.Qt.Key_S:
             print("S pressed")
-            self.save_roi_data()
+            self.save_roi_center()
 
     def play_sound(self):
         finish_sound = QSound("../static/signal.wav")

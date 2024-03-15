@@ -9,4 +9,4 @@ class ExperimentParameter:
         self.interested_points_num = 1000
         self.selected_points = []
         self.threshold = 9400
-        self.selected_point_radius = 3
+        self.selected_point_radius = 15
