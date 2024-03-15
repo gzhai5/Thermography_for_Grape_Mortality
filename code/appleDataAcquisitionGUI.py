@@ -11,26 +11,12 @@ from PIL import Image, ImageDraw
 # set up N for how many images we are gonna taken (30fps), and initilize a np nd array for saving img data
 mode = "disconnect"   # set the initial mode to disconnect
 t0, t1, t2 = 1, 10, 20
-fps = 60
-image_interval = 60
-N = t2*fps
+fps = 1
 
 # set up the saving path and saved filename for the data
 this_file = os.path.abspath(__file__)
 Saved_Folder = "F:/"
 save_file_name = ""
-
-# set up the focus step, 100 as a default
-focus_step = 100
-selected_text = "default"
-
-# set up the IRformat class, and set the default irformat = radiometric
-class IRFormatType:
-    LINEAR_10MK = 1
-    LINEAR_100MK = 2
-    RADIOMETRIC = 3
-CHOSEN_IR_TYPE = IRFormatType.RADIOMETRIC
-pixel_format = "Mono16"
 
 # set up object parameters, it could be changed in GUI
 Emiss = 0.97
@@ -188,15 +174,18 @@ class VideoThread_timed(QThread):
             node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
             # ensure the pixel format = mono8 for streaming
             node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
-            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono14'))
-            node_pixel_format_mono8 = node_pixel_format_mono8.GetValue()
-            node_pixel_format.SetIntValue(node_pixel_format_mono8)
+            node_pixel_format_mono14 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
+            node_pixel_format_mono14 = node_pixel_format_mono14.GetValue()
+            node_pixel_format.SetIntValue(node_pixel_format_mono14)
 
             # test ir format settings
             node_IRFormat = PySpin.CEnumerationPtr(nodemap.GetNode('IRFormat'))
-            node_temp_radiometric = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('Radiometric'))
-            node_radiometric = node_temp_radiometric.GetValue()
-            node_IRFormat.SetIntValue(node_radiometric)
+            # node_temp_radiometric = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('Radiometric'))
+            # node_radiometric = node_temp_radiometric.GetValue()
+            
+            node_temp_linear_high = PySpin.CEnumEntryPtr(node_IRFormat.GetEntryByName('TemperatureLinear10mK'))
+            node_temp_high = node_temp_linear_high.GetValue()
+            node_IRFormat.SetIntValue(node_temp_high)
 
 
             if not PySpin.IsAvailable(node_bufferhandling_mode) or not PySpin.IsWritable(node_bufferhandling_mode):
@@ -228,9 +217,11 @@ class VideoThread_timed(QThread):
                 print('Acquiring images...')
                 device_serial_number = ''
                 node_device_serial_number = PySpin.CStringPtr(nodemap_tldevice.GetNode('DeviceSerialNumber'))
+                print("get here 217")
                 if PySpin.IsAvailable(node_device_serial_number) and PySpin.IsReadable(node_device_serial_number):
                     device_serial_number = node_device_serial_number.GetValue()
                     print('Device serial number retrieved as %s...' % device_serial_number)
+
 
                 index = 0
                 frames_per_min = 30 * 60
@@ -246,16 +237,21 @@ class VideoThread_timed(QThread):
                             image_data = image_result.GetNDArray()
                             print("image_data shape:", image_data.shape)
                             print("image_data type:", image_data.dtype)
+                            image_Temp_Celsius_high = (image_data * 0.01) - 273.15
                             index += 1
 
-                            # Save every 4th frame into buffer so reduce the outputfps to 15
-                            if index % 4 == 0:
+
+                            # convert raw image data into tempature value
+                            print("image val:", np.mean(image_Temp_Celsius_high))
+
+                            # Save every 60th frame into buffer so reduce the outputfps to 15
+                            if index % 60 == 0:
                                 buffer.append(image_data)
 
                             # Flush buffer to file when it reaches buffer size
                             if len(buffer) >= frames_per_min:
                                 minute_index = index // (frames_per_min * 2)
-                                temp_filename = f"data_apple_13_22/frames_minute_{minute_index}.npy"
+                                temp_filename = f"data_apple_test/frames_minute_{minute_index}.npy"
                                 np.save(temp_filename, np.array(buffer, dtype=np.uint16))
                                 print(f"Saved buffer to {temp_filename}")
                                 buffer = []
@@ -275,7 +271,7 @@ class VideoThread_timed(QThread):
                 # Flush any remaining frames in the buffer
                 if buffer:
                     minute_index = index // (frames_per_min * 2)
-                    temp_filename = f"data_apple_13_22/frames_minute_{minute_index}.npy"
+                    temp_filename = f"data_apple_test/frames_minute_{minute_index}.npy"
                     np.save(temp_filename, np.array(buffer, dtype=np.uint16))
                     print(f"Final save of buffer to {temp_filename}")
 
@@ -290,7 +286,7 @@ class VideoThread_timed(QThread):
         try:
             system.ReleaseInstance()
         except Exception as e:
-            print('an release error occurred', e)           
+            print('an release error occurred', e)          
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
@@ -323,52 +319,6 @@ class App(QMainWindow):
         sys.stdout = self
         self.text = QPlainTextEdit()
         self.text.setReadOnly(True)
-
-        # set boxes for typing in time, and the last one is for data saving_path
-        label_t0 = QLabel('t0', self)
-        label_t0.move(680, 190)
-        box_t0 = QLineEdit(str(t0), self)
-        box_t0.setAlignment(QtCore.Qt.AlignCenter)    # set the text in middle
-        box_t0.resize(40,30)
-        box_t0.move(700,190)
-        box_t0.returnPressed.connect(lambda: save_t0())
-        def save_t0():
-            if re.match("^\d+$", box_t0.text()):
-                global t0
-                t0 = int(box_t0.text())
-                print("You have set t0 to  " + str(t0) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_t1 = QLabel('t1', self)
-        label_t1.move(780, 190)
-        box_t1 = QLineEdit(str(t1), self)
-        box_t1.setAlignment(QtCore.Qt.AlignCenter)
-        box_t1.resize(40,30)
-        box_t1.move(800,190)
-        box_t1.returnPressed.connect(lambda: save_t1())
-        def save_t1():
-            if re.match("^\d+$", box_t1.text()):
-                global t1
-                t1 = int(box_t1.text())
-                print("You have set t1 to  " + str(t1) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        label_t2 = QLabel('t2', self)
-        label_t2.move(880, 190)
-        box_t2 = QLineEdit(str(t2), self)
-        box_t2.setAlignment(QtCore.Qt.AlignCenter)
-        box_t2.resize(40,30)
-        box_t2.move(900,190)
-        box_t2.returnPressed.connect(lambda: save_t2())
-        def save_t2():
-            if re.match("^\d+$", box_t2.text()):
-                global t2
-                t2 = int(box_t2.text())
-                print("You have set t2 to  " + str(t2) + "  !")
-            else:
-                print("wrong input! Want int")
 
         # for the data saving path and also saved filename
         box_path = QLineEdit(save_file_name, self)
@@ -407,67 +357,6 @@ class App(QMainWindow):
         button_disconnect.resize(80,40)
         button_disconnect.move(880,30)
 
-        button_autofocus = QPushButton('Auto', self)
-        button_autofocus.clicked.connect(self.click_autofocus)
-        button_autofocus.setFocusPolicy(Qt.NoFocus)
-        button_autofocus.resize(80,40)
-        button_autofocus.move(680,80)
-
-        button_focusplus = QPushButton('+', self)
-        button_focusplus.clicked.connect(self.click_focusplus)
-        button_focusplus.resize(80,40)
-        button_focusplus.move(780,80)
-
-        button_focusminus = QPushButton('-', self)
-        button_focusminus.clicked.connect(self.click_focusminus)
-        button_focusminus.resize(80,40)
-        button_focusminus.move(880,80)
-
-        combo_box_autofocus_method = QComboBox(self)
-        options = ["Coarse", "Fine"]
-        combo_box_autofocus_method.addItems(options)
-        combo_box_autofocus_method.setCurrentIndex(0)
-        combo_box_autofocus_method.currentIndexChanged.connect(self.autofocus_method)
-        combo_box_autofocus_method.resize(90,40)
-        combo_box_autofocus_method.move(680,135)
-
-        # combo_box_pixelformat_method = QComboBox(self)
-        # options_pf = ["Mono8", "Mono16"]
-        # combo_box_pixelformat_method.addItems(options_pf)
-        # combo_box_pixelformat_method.setCurrentIndex(0)
-        # combo_box_pixelformat_method.currentIndexChanged.connect(lambda: imageformat_method)
-        # combo_box_pixelformat_method.resize(90,40)
-        # combo_box_pixelformat_method.move(780,380)
-        # def imageformat_method(self, index):
-        #     global pixel_format
-        #     if index == 0:
-        #         pixel_format = "Mono8"
-        #         print("You have choose the image format as Mono8!")
-        #     elif index == 1:
-        #         pixel_format = "Mono16"
-        #         print("You have choose the image format as Mono16!")
-
-        box_focus_step = QLineEdit('Focus Step', self)
-        box_focus_step.setAlignment(QtCore.Qt.AlignCenter)
-        box_focus_step.resize(90,40)
-        box_focus_step.move(875,135)
-        box_focus_step.returnPressed.connect(lambda: save_focus_step())
-        def save_focus_step():
-            if re.match("^\d+$", box_focus_step.text()):
-                global focus_step
-                focus_step = int(box_focus_step.text())
-                print("You have set focus step to  " + str(focus_step) + "  !")
-            else:
-                print("wrong input! Want int")
-
-        button_parameter = QPushButton('Set Parameters', self)
-        button_parameter.resize(280,30)
-        button_parameter.move(680,410)
-        button_parameter.clicked.connect(lambda: click_button_parameter())
-        def click_button_parameter():
-            if self.subParametersWindow is None:
-                self.subParametersWindow = SubParameterGUI()
-            self.subParametersWindow.show()
 
         self.button_start_end = QPushButton('Start DAQ', self)
         self.button_start_end.resize(280,30)
@@ -541,52 +430,7 @@ class App(QMainWindow):
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
 
-    def click_autofocus(self):
-        print('-------------Autofocus Clicked-------------')
-        system = PySpin.System.GetInstance()
-        camera = system.GetCameras()[0]
-        print('camera', camera)
-        nodemap = camera.GetNodeMap()
-        print('!nodemap', nodemap)
-        node_autofocus = PySpin.CCommandPtr(nodemap.GetNode('AutoFocus'))
-        print('!autofocus', node_autofocus)
-        node_autofocus.Execute()
-
-    def click_focusplus(self):
-        print("-------------Plus " + str(focus_step) + " Focus-------------")
-        system = PySpin.System.GetInstance()
-        camera = system.GetCameras()[0]
-        nodemap = camera.GetNodeMap()
-        node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
-        focus_pos_curr = node_focus_pos.GetValue()
-        node_focus_pos.SetValue(focus_pos_curr + focus_step)
-
-    def click_focusminus(self):
-        print("-------------Minus " + str(focus_step) + " Focus-------------")
-        system = PySpin.System.GetInstance()
-        camera = system.GetCameras()[0]
-        nodemap = camera.GetNodeMap()
-        node_focus_pos = PySpin.CIntegerPtr(nodemap.GetNode('FocusPos'))
-        focus_pos_curr = node_focus_pos.GetValue()
-        node_focus_pos.SetValue(focus_pos_curr - focus_step)
-
-    def autofocus_method(self, index):
-        if index == 0:
-            print("You have choose the autofoucs method as Coarse!")
-            system = PySpin.System.GetInstance()
-            camera = system.GetCameras()[0]
-            nodemap = camera.GetNodeMap()
-            node_autofocus_method = PySpin.CEnumerationPtr(nodemap.GetNode('AutoFocusMethod'))
-            node_autofocus_method_coarse = node_autofocus_method.GetEntryByName('Coarse')
-            node_autofocus_method.SetIntValue(node_autofocus_method_coarse.GetValue())
-        elif index == 1:
-            print("You have choose the autofoucs method as Fine!")
-            system = PySpin.System.GetInstance()
-            camera = system.GetCameras()[0]
-            nodemap = camera.GetNodeMap()
-            node_autofocus_method = PySpin.CEnumerationPtr(nodemap.GetNode('AutoFocusMethod'))
-            node_autofocus_method_fine = node_autofocus_method.GetEntryByName('Fine')
-            node_autofocus_method.SetIntValue(node_autofocus_method_fine.GetValue())
+    
 
     def start_DAQ(self):
             print('-------------DAQ Clicked-------------')
@@ -616,12 +460,6 @@ class App(QMainWindow):
     def flush(self):
         pass
     
-    # Replace 'Space' with your desired key
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Space:
-            self.start_DAQ()
-        elif event.key() == Qt.Key_A:
-            self.click_autofocus()
 
     def closeEvent(self, event):
         self.thread.stop()
@@ -663,142 +501,7 @@ class App(QMainWindow):
 
         p = convert_to_Qt_format.scaled(640, 480, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-
-
-class SubParameterGUI(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Camera Parameter Setting")
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-        self.setMinimumWidth(365)
-        self.setMinimumHeight(290)
-
-        # create boxs for saving object parameters
-        box_emiss = QLineEdit('Emiss', self)
-        box_emiss.setAlignment(QtCore.Qt.AlignCenter)
-        box_emiss.resize(70,30)
-        box_emiss.move(20,20)
-        box_emiss.returnPressed.connect(lambda: save_emiss())
-        def save_emiss():
-            if re.match("^\d+(\.\d+)?$", box_emiss.text()):
-                global Emiss
-                Emiss = float(box_emiss.text())
-                print("You have set Emiss to  " + str(Emiss) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_trefl = QLineEdit('TRefl', self)
-        box_trefl.setAlignment(QtCore.Qt.AlignCenter)
-        box_trefl.resize(70,30)
-        box_trefl.move(20,60)
-        box_trefl.returnPressed.connect(lambda: save_trefl())
-        def save_trefl():
-            if re.match("^\d+(\.\d+)?$", box_trefl.text()):
-                global TRefl
-                TRefl = float(box_trefl.text())
-                print("You have set TRefl to  " + str(TRefl) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_tatm = QLineEdit('TAtm', self)
-        box_tatm.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatm.resize(70,30)
-        box_tatm.move(20,100)
-        box_tatm.returnPressed.connect(lambda: save_tatm())
-        def save_tatm():
-            if re.match("^\d+(\.\d+)?$", box_tatm.text()):
-                global TAtm
-                TAtm = float(box_tatm.text())
-                print("You have set TAtm to  " + str(TAtm) + "  !")
-                global TAtmC
-                TAtmC = TAtm - 273.15
-                print("You have also set TAtm to  " + str(TAtmC) + "  !")
-                print("Because normally TAtmC = TAtm - 273.15 by formula, but you can still change TatmC in its box")
-                global ExtOpticsTemp
-                ExtOpticsTemp = TAtm
-                print("You have also set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-                print("Because normally ExtOpticsTemp = TAtm by formula, but you can still change ExtOpticsTemp in its box")
-            else:
-                print("wrong input! Want float")
-
-        box_tatmc = QLineEdit('TAtmC', self)
-        box_tatmc.setAlignment(QtCore.Qt.AlignCenter)
-        box_tatmc.resize(70,30)
-        box_tatmc.move(20,140)
-        box_tatmc.returnPressed.connect(lambda: save_tatmc())
-        def save_tatmc():
-            if re.match("^\d+(\.\d+)?$", box_tatmc.text()):
-                global TAtmC
-                TAtmC = float(box_tatmc.text())
-                print("You have set TAtmC to  " + str(TAtmC) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_humidity = QLineEdit('Humidity', self)
-        box_humidity.setAlignment(QtCore.Qt.AlignCenter)
-        box_humidity.resize(70,30)
-        box_humidity.move(20,180)
-        box_humidity.returnPressed.connect(lambda: save_humidity())
-        def save_humidity():
-            if re.match("^\d+(\.\d+)?$", box_humidity.text()):
-                global Humidity
-                Humidity = float(box_humidity.text())
-                print("You have set Humidity to  " + str(Humidity) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_dist = QLineEdit('Dist', self)
-        box_dist.setAlignment(QtCore.Qt.AlignCenter)
-        box_dist.resize(70,30)
-        box_dist.move(20,220)
-        box_dist.returnPressed.connect(lambda: save_dist())
-        def save_dist():
-            if re.match("^\d+(\.\d+)?$", box_dist.text()):
-                global Dist
-                Dist = float(box_dist.text())
-                print("You have set Dist to  " + str(Dist) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTransmission = QLineEdit('ExtOpticsTransmission', self)
-        box_extOpticsTransmission.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTransmission.resize(150,30)
-        box_extOpticsTransmission.move(180,20)
-        box_extOpticsTransmission.returnPressed.connect(lambda: save_extOpticsTransmission())
-        def save_extOpticsTransmission():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTransmission.text()):
-                global ExtOpticsTransmission
-                ExtOpticsTransmission = int(box_extOpticsTransmission.text())
-                print("You have set ExtOpticsTransmission to  " + str(ExtOpticsTransmission) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_extOpticsTemp = QLineEdit('ExtOpticsTemp', self)
-        box_extOpticsTemp.setAlignment(QtCore.Qt.AlignCenter)
-        box_extOpticsTemp.resize(150,30)
-        box_extOpticsTemp.move(180,60)
-        box_extOpticsTemp.returnPressed.connect(lambda: save_extOpticsTemp())
-        def save_extOpticsTemp():
-            if re.match("^\d+(\.\d+)?$", box_extOpticsTemp.text()):
-                global ExtOpticsTemp
-                ExtOpticsTemp = float(box_extOpticsTemp.text())
-                print("You have set ExtOpticsTemp to  " + str(ExtOpticsTemp) + "  !")
-            else:
-                print("wrong input! Want float")
-
-        box_node_num_upper_limit = QLineEdit('Node UpperLimit', self)
-        box_node_num_upper_limit.setAlignment(QtCore.Qt.AlignCenter)
-        box_node_num_upper_limit.resize(150,30)
-        box_node_num_upper_limit.move(180,100)
-        box_node_num_upper_limit.returnPressed.connect(lambda: save_node_num_upper_limit())
-        def save_node_num_upper_limit():
-            if re.match("^\d+$", box_node_num_upper_limit.text()):
-                global node_num_upper_limit
-                node_num_upper_limit = int(box_node_num_upper_limit.text())
-                print("You have set the upper limit of node number to  " + str(node_num_upper_limit) + "  !")
-            else:
-                print("wrong input! Want Int")        
+     
 
 if __name__=="__main__":
     app = QApplication(sys.argv)

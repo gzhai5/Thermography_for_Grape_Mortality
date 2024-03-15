@@ -12,7 +12,7 @@ class IRFormatType:
 
 CONTINUE_RECORDING = True
 CHOSEN_IR_TYPE = IRFormatType.RADIOMETRIC
-# CHOSEN_IR_TYPE = IRFormatType.LINEAR_100MK
+CHOSEN_IR_TYPE = IRFormatType.LINEAR_10MK
 
 
 
@@ -48,7 +48,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
     node_bufferhandling_mode = PySpin.CEnumerationPtr(sNodemap.GetNode('StreamBufferHandlingMode'))
 
     node_pixel_format = PySpin.CEnumerationPtr(nodemap.GetNode('PixelFormat'))
-    node_pixel_format_mono16 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
+    node_pixel_format_mono16 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono14'))
     pixel_format_mono16 = node_pixel_format_mono16.GetValue()
     node_pixel_format.SetIntValue(pixel_format_mono16)
 
@@ -136,45 +136,45 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
             print('Device serial number retrieved as %s...' % device_serial_number)
 
         # Retrieve Calibration details
-        CalibrationQueryR_node = PySpin.CFloatPtr(nodemap.GetNode('R'))
-        R = CalibrationQueryR_node.GetValue()
-        print('R =', R)
+        # CalibrationQueryR_node = PySpin.CFloatPtr(nodemap.GetNode('R'))
+        # R = CalibrationQueryR_node.GetValue()
+        # print('R =', R)
 
-        CalibrationQueryB_node = PySpin.CFloatPtr(nodemap.GetNode('B'))
-        B = CalibrationQueryB_node.GetValue()
-        print('B =', B)
+        # CalibrationQueryB_node = PySpin.CFloatPtr(nodemap.GetNode('B'))
+        # B = CalibrationQueryB_node.GetValue()
+        # print('B =', B)
 
-        CalibrationQueryF_node = PySpin.CFloatPtr(nodemap.GetNode('F'))
-        F = CalibrationQueryF_node.GetValue()
-        print('F =', F)
+        # CalibrationQueryF_node = PySpin.CFloatPtr(nodemap.GetNode('F'))
+        # F = CalibrationQueryF_node.GetValue()
+        # print('F =', F)
 
-        CalibrationQueryX_node = PySpin.CFloatPtr(nodemap.GetNode('X'))
-        X = CalibrationQueryX_node.GetValue()
-        print('X =', X)
+        # CalibrationQueryX_node = PySpin.CFloatPtr(nodemap.GetNode('X'))
+        # X = CalibrationQueryX_node.GetValue()
+        # print('X =', X)
 
-        CalibrationQueryA1_node = PySpin.CFloatPtr(nodemap.GetNode('alpha1'))
-        A1 = CalibrationQueryA1_node.GetValue()
-        print('alpha1 =', A1)
+        # CalibrationQueryA1_node = PySpin.CFloatPtr(nodemap.GetNode('alpha1'))
+        # A1 = CalibrationQueryA1_node.GetValue()
+        # print('alpha1 =', A1)
 
-        CalibrationQueryA2_node = PySpin.CFloatPtr(nodemap.GetNode('alpha2'))
-        A2 = CalibrationQueryA2_node.GetValue()
-        print('alpha2 =', A2)
+        # CalibrationQueryA2_node = PySpin.CFloatPtr(nodemap.GetNode('alpha2'))
+        # A2 = CalibrationQueryA2_node.GetValue()
+        # print('alpha2 =', A2)
 
-        CalibrationQueryB1_node = PySpin.CFloatPtr(nodemap.GetNode('beta1'))
-        B1 = CalibrationQueryB1_node.GetValue()
-        print('beta1 =', B1)
+        # CalibrationQueryB1_node = PySpin.CFloatPtr(nodemap.GetNode('beta1'))
+        # B1 = CalibrationQueryB1_node.GetValue()
+        # print('beta1 =', B1)
 
-        CalibrationQueryB2_node = PySpin.CFloatPtr(nodemap.GetNode('beta2'))
-        B2 = CalibrationQueryB2_node.GetValue()
-        print('beta2 =', B2)
+        # CalibrationQueryB2_node = PySpin.CFloatPtr(nodemap.GetNode('beta2'))
+        # B2 = CalibrationQueryB2_node.GetValue()
+        # print('beta2 =', B2)
 
-        CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
-        J1 = CalibrationQueryJ1_node.GetValue()
-        print('Gain =', J1)
+        # CalibrationQueryJ1_node = PySpin.CFloatPtr(nodemap.GetNode('J1'))    # Gain
+        # J1 = CalibrationQueryJ1_node.GetValue()
+        # print('Gain =', J1)
 
-        CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
-        J0 = CalibrationQueryJ0_node.GetValue()
-        print('Offset =', J0)
+        # CalibrationQueryJ0_node = PySpin.CIntegerPtr(nodemap.GetNode('J0'))   # Offset
+        # J0 = CalibrationQueryJ0_node.GetValue()
+        # print('Offset =', J0)
 
         # Figure(1) is default so you can omit this line. Figure(0) will create a new window every time program hits this line
         fig = plt.figure(1)
@@ -254,8 +254,9 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                     if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
                         # Transforming the data array into a temperature array, if streaming mode is set to TemperatueLinear10mK
                         image_Temp_Celsius_high = (image_data * 0.01) - 273.15
+                        print("data", np.mean(image_Temp_Celsius_high))
                         # Displaying an image of temperature when streaming mode is set to TemperatureLinear10mK
-                        plt.imshow(image_Temp_Celsius_high, cmap='inferno', aspect='auto')
+                        plt.imshow(image_Temp_Celsius_high, cmap='gray', aspect='auto')
                         plt.colorbar(format='%.2f')
 
                     elif CHOSEN_IR_TYPE == IRFormatType.LINEAR_100MK:
@@ -343,9 +344,11 @@ def run_single_camera(cam):
 
         # Initialize camera
         cam.Init()
+        print("camera initlized")
 
         # Retrieve GenICam nodemap
         nodemap = cam.GetNodeMap()
+        print("nodmap got")
 
         # Acquire images
         result &= acquire_and_display_images(cam, nodemap, nodemap_tldevice)
