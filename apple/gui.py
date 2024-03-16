@@ -1,7 +1,8 @@
 import logging
+import cv2
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit, QFileDialog, QRadioButton, QGroupBox
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QImage
 from threads.stream import StreamingThread
 
 # Configure logging
@@ -38,11 +39,13 @@ class MyApp(QWidget):
         # Radio Buttons
         self.haltRadio = QRadioButton("Halt")
         self.haltRadio.setChecked(True)
+        self.haltRadio.toggled.connect(self.toggle_halt)
         self.haltRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
         self.streamRadio = QRadioButton("Stream")
         self.streamRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
         self.streamRadio.toggled.connect(self.toggle_stream)
         self.acquisitionRadio = QRadioButton("Acquisition")
+        self.acquisitionRadio.toggled.connect(self.toggle_acquisition)
         self.acquisitionRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
         modeLayout.addWidget(self.haltRadio)
         modeLayout.addWidget(self.streamRadio)
@@ -101,8 +104,37 @@ class MyApp(QWidget):
             logging.info('Stream mode deselected')
             self.stream_thread.stop()
 
+    def toggle_halt(self):
+        if self.haltRadio.isChecked():
+            self.stream_thread.stop()
+            logging.info("Halt mode slected")
+        else:
+            logging.info("Halt mode stopped")
+
+    def toggle_acquisition(self):
+        if self.acquisitionRadio.isChecked():
+            self.stream_thread.stop()
+            logging.info("Acquisition Mode selected")
+        else:
+            logging.info("Acquisition mode Stopped")
+
     def update_image_display(self, image):
         # Convert the image to QPixmap and display it
-        qimage = QImage(image.data, image.shape[1], image.shape[0], QImage.Format_RGB888).rgbSwapped()
-        pixmap = QPixmap.fromImage(qimage)
-        self.videoLabel.setPixmap(pixmap.scaled(self.videoLabel.size(), Qt.KeepAspectRatio))
+        qt_img = self.convert_cv_qt(image)
+        self.videoLabel.setPixmap(qt_img)
+
+    def convert_cv_qt(self, cv_img):
+        if (len(cv_img.shape) == 2):
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_GRAY2RGB)
+        else:
+            rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+
+        height, width, channel = rgb_image.shape
+
+        if len(cv_img.shape) == 2:
+            convert_to_qt_format = QImage(rgb_image.data, cv_img.shape[1], cv_img.shape[0], 0, QImage.Format_RGB888)
+        else:
+            bytes_per_line = channel * width
+            convert_to_qt_format = QImage(rgb_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
+        p = convert_to_qt_format.scaled(620, 330, Qt.KeepAspectRatio)
+        return QPixmap.fromImage(p)
