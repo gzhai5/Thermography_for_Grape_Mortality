@@ -21,7 +21,7 @@ a6700_fps = 60
 wanting_fps = 1
 
 class AcquisitionThread(QThread):
-    update_image = pyqtSignal(np.ndarray)
+    update_image = pyqtSignal(np.ndarray, float)
 
     def __init__(self, camera, file_path = './stored_data/'):
         super(AcquisitionThread, self).__init__()
@@ -278,7 +278,7 @@ class AcquisitionThread(QThread):
                         image_data_d = image_data
                         image_data_dt = image_data_d
                         image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
-                        self.update_image.emit(image_data_dt)
+                        self.update_image.emit(image_data_dt, np.mean(image_data_dt))
 
                         # if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
                         #     # Transforming the data array into a temperature array, if streaming mode is set to TemperatueLinear10mK

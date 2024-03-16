@@ -1,5 +1,7 @@
 import logging
 import cv2
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit, QFileDialog, QRadioButton, QGroupBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
@@ -21,6 +23,10 @@ class MyApp(QWidget):
         self.acquisition_thread.update_image.connect(self.update_image_display)
         self.halt_thread = HaltingThread()
         self.halt_thread.change_pixmap_signal.connect(self.update_image_display)
+        # Initialize Matplotlib figure and canvas
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.plot_data = []
         self.initUI()
 
     def initUI(self):
@@ -74,7 +80,8 @@ class MyApp(QWidget):
         self.plotLabel.setAlignment(Qt.AlignCenter)
         self.plotLabel.setMinimumSize(400, 300)
         self.plotLabel.setStyleSheet("QLabel { background-color : #2C2C54; color: white; }")
-        botLayout.addWidget(self.plotLabel)
+        self.plotLabel.setParent(None)
+        botLayout.addWidget(self.canvas)
 
         # Lab Logo
         self.labLogo = QLabel(self)
@@ -130,10 +137,22 @@ class MyApp(QWidget):
             self.acquisition_thread.stop()
             logging.info("Acquisition mode Stopped")
 
-    def update_image_display(self, image):
+    def update_image_display(self, image, mean_value):
         # Convert the image to QPixmap and display it
         qt_img = self.convert_cv_qt(image)
         self.videoLabel.setPixmap(qt_img)
+
+        # Update the plot with the new mean value
+        self.update_plot(mean_value)
+
+    def update_plot(self, mean_value):
+        # Add the new mean value to the data and redraw the plot
+        self.plot_data.append(mean_value)
+        self.figure.clear()
+        plt.plot(self.plot_data, '-o')  # Plotting the data
+        plt.ylabel('Mean Value')
+        plt.xlabel('Frame')
+        self.canvas.draw()
 
     def convert_cv_qt(self, cv_img):
         if (len(cv_img.shape) == 2):
