@@ -4,15 +4,23 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
 from threads.stream import StreamingThread
+from threads.acquisition import AcquisitionThread
+from threads.halt import HaltingThread
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+folder_path = './stored_data/'
 
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
         self.stream_thread = StreamingThread(0)
         self.stream_thread.update_image.connect(self.update_image_display)
+        self.acquisition_thread = AcquisitionThread(0, file_path=folder_path)
+        self.acquisition_thread.update_image.connect(self.update_image_display)
+        self.halt_thread = HaltingThread()
+        self.halt_thread.change_pixmap_signal.connect(self.update_image_display)
         self.initUI()
 
     def initUI(self):
@@ -94,6 +102,8 @@ class MyApp(QWidget):
         folderPath = QFileDialog.getExistingDirectory(self, "Select Directory", options=options)
         if folderPath:
             self.savePathButton.setText(folderPath)
+            global folder_path
+            folder_path = folderPath
             logging.info(f'Save path selected: {folderPath}')
 
     def toggle_stream(self):
@@ -106,16 +116,18 @@ class MyApp(QWidget):
 
     def toggle_halt(self):
         if self.haltRadio.isChecked():
-            self.stream_thread.stop()
+            self.halt_thread.start()
             logging.info("Halt mode slected")
         else:
+            self.halt_thread.stop()
             logging.info("Halt mode stopped")
 
     def toggle_acquisition(self):
         if self.acquisitionRadio.isChecked():
-            self.stream_thread.stop()
+            self.acquisition_thread.start()
             logging.info("Acquisition Mode selected")
         else:
+            self.acquisition_thread.stop()
             logging.info("Acquisition mode Stopped")
 
     def update_image_display(self, image):
