@@ -72,6 +72,8 @@ class StreamingThread(QThread):
         del cam
         cam_list.Clear()
         system.ReleaseInstance()
+        print('Camera %d is cleared and released... \n' % 1)
+        raise Exception('Camera is cleared and released... \n')
 
     def run_single_camera(self, cam):
         try:
@@ -111,6 +113,13 @@ class StreamingThread(QThread):
         node_pixel_format_mono16 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono14'))
         pixel_format_mono16 = node_pixel_format_mono16.GetValue()
         node_pixel_format.SetIntValue(pixel_format_mono16)
+
+        node_acquisition_framerate = PySpin.CFloatPtr(nodemap.GetNode('AcquisitionFrameRate'))
+        if not PySpin.IsAvailable(node_acquisition_framerate) and not PySpin.IsReadable(node_acquisition_framerate):
+            print('Unable to retrieve frame rate. Aborting...')
+        else:
+            framerate_to_set = node_acquisition_framerate.GetValue()
+            print('Frame rate to be set to %d...' % framerate_to_set)
 
         if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
             # This section is to be activated only to set the streaming mode to TemperatureLinear10mK
