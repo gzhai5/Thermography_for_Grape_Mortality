@@ -14,7 +14,7 @@ class IRFormatType:
     LINEAR_100MK = 2
     RADIOMETRIC = 3
 
-
+CHOSEN_IR_TYPE = IRFormatType.RADIOMETRIC
 CONTINUE_RECORDING = True
 
 class StreamingThread(QThread):
@@ -30,14 +30,18 @@ class StreamingThread(QThread):
         while self.running:
             try:
                 self.acquire_image()
+                break
             except Exception as e:
                 print("Error acquiring image: ", e)
     
     def stop(self):
+        global CONTINUE_RECORDING
+        CONTINUE_RECORDING = False
         self.running = False
 
     def acquire_image(self):
         # Retrieve singleton reference to system object
+        result = True
         system = PySpin.System.GetInstance()
 
         # Retrieve list of cameras from the system
@@ -214,7 +218,7 @@ class StreamingThread(QThread):
                 print('K2 =', K2)
 
             # Retrieve and display images
-            print('Press Enter to stop streaming')
+            print('Begin streaming')
             while(CONTINUE_RECORDING):
                 try:
 
@@ -239,27 +243,25 @@ class StreamingThread(QThread):
 
                         # Getting the image data as a np array
                         image_data = image_result.GetNDArray()
+                        image_data_d = image_data
+                        image_data_dt = image_data_d
+                        image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
+                        self.update_image.emit(image_data_dt)
 
-                        if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
-                            # Transforming the data array into a temperature array, if streaming mode is set to TemperatueLinear10mK
-                            image_Temp_Celsius_high = (image_data * 0.01) - 273.15
-                            print("data", np.mean(image_Temp_Celsius_high))
-                            # Emit the signal to update the image display
-                            self.update_image.emit(image_Temp_Celsius_high)
+                        # if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
+                        #     # Transforming the data array into a temperature array, if streaming mode is set to TemperatueLinear10mK
+                        #     image_Temp_Celsius_high = (image_data * 0.01) - 273.15
+                        #     print("data", np.mean(image_Temp_Celsius_high))
 
-                        elif CHOSEN_IR_TYPE == IRFormatType.LINEAR_100MK:
-                            # Transforming the data array into a temperature array, if streaming mode is set to TemperatureLinear100mK
-                            image_Temp_Celsius_low = (image_data * 0.1) - 273.15
-                            # Emit the signal to update the image display
-                            self.update_image.emit(image_Temp_Celsius_low)
+                        # elif CHOSEN_IR_TYPE == IRFormatType.LINEAR_100MK:
+                        #     # Transforming the data array into a temperature array, if streaming mode is set to TemperatureLinear100mK
+                        #     image_Temp_Celsius_low = (image_data * 0.1) - 273.15
 
-                        elif CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
-                            # Transforming the data array into a pseudo radiance array, if streaming mode is set to Radiometric.
-                            # and then calculating the temperature array (degrees Celsius) with the full thermography formula
-                            image_Radiance = (image_data - J0) / J1
-                            image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
-                            # Emit the signal to update the image display
-                            self.update_image.emit(image_Temp)
+                        # elif CHOSEN_IR_TYPE == IRFormatType.RADIOMETRIC:
+                        #     # Transforming the data array into a pseudo radiance array, if streaming mode is set to Radiometric.
+                        #     # and then calculating the temperature array (degrees Celsius) with the full thermography formula
+                        #     image_Radiance = (image_data - J0) / J1
+                        #     image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
 
                         # If user presses enter, close the program
                         if keyboard.is_pressed('ENTER'):
