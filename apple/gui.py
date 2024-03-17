@@ -17,16 +17,13 @@ folder_path = './stored_data/'
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.stream_thread = StreamingThread(0)
-        self.stream_thread.update_image.connect(self.update_image_display)
-        self.acquisition_thread = AcquisitionThread(0, file_path=folder_path)
-        self.acquisition_thread.update_image.connect(self.update_image_display)
-        self.halt_thread = HaltingThread()
-        self.halt_thread.change_pixmap_signal.connect(self.update_image_display)
-        # Initialize Matplotlib figure and canvas
-        self.figure = plt.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.plot_data = []
+        self.stream_thread = None
+        self.acquisition_thread = None
+        self.halt_thread = None
+        # # Initialize Matplotlib figure and canvas
+        # self.figure = plt.figure()
+        # self.canvas = FigureCanvas(self.figure)
+        # self.plot_data = []
         self.initUI()
 
     def initUI(self):
@@ -80,8 +77,8 @@ class MyApp(QWidget):
         self.plotLabel.setAlignment(Qt.AlignCenter)
         self.plotLabel.setMinimumSize(400, 300)
         self.plotLabel.setStyleSheet("QLabel { background-color : #2C2C54; color: white; }")
-        self.plotLabel.setParent(None)
-        botLayout.addWidget(self.canvas)
+        # self.plotLabel.setParent(None)
+        botLayout.addWidget(self.plotLabel)
 
         # Lab Logo
         self.labLogo = QLabel(self)
@@ -116,34 +113,43 @@ class MyApp(QWidget):
     def toggle_stream(self):
         if self.streamRadio.isChecked():
             logging.info('Stream mode selected')
+            self.stream_thread = StreamingThread(0)
+            self.stream_thread.update_image.connect(self.update_image_display)
             self.stream_thread.start()
         else:
             logging.info('Stream mode deselected')
-            self.stream_thread.stop()
+            self.stream_thread.stop() if self.stream_thread else None
+            self.stream_thread = None
 
     def toggle_halt(self):
         if self.haltRadio.isChecked():
+            self.halt_thread = HaltingThread()
+            self.halt_thread.change_pixmap_signal.connect(self.update_image_display)
             self.halt_thread.start()
             logging.info("Halt mode slected")
         else:
-            self.halt_thread.stop()
+            self.halt_thread.stop() if self.halt_thread else None
+            self.halt_thread = None
             logging.info("Halt mode stopped")
 
     def toggle_acquisition(self):
         if self.acquisitionRadio.isChecked():
+            self.acquisition_thread = AcquisitionThread(0, file_path=folder_path)
+            self.acquisition_thread.update_image.connect(self.update_image_display)
             self.acquisition_thread.start()
             logging.info("Acquisition Mode selected")
         else:
-            self.acquisition_thread.stop()
+            self.acquisition_thread.stop() if self.acquisition_thread else None
+            self.acquisition_thread = None
             logging.info("Acquisition mode Stopped")
 
-    def update_image_display(self, image, mean_value):
+    def update_image_display(self, image, mean_value=None):
         # Convert the image to QPixmap and display it
         qt_img = self.convert_cv_qt(image)
         self.videoLabel.setPixmap(qt_img)
 
         # Update the plot with the new mean value
-        self.update_plot(mean_value)
+        # self.update_plot(mean_value)
 
     def update_plot(self, mean_value):
         # Add the new mean value to the data and redraw the plot

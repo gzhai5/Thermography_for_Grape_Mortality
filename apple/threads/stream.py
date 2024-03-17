@@ -97,7 +97,7 @@ class StreamingThread(QThread):
 
         except PySpin.SpinnakerException as ex:
             print('Error: %s' % ex)
-            result = False
+            raise Exception('Error in <run_single_camera>: %s' % ex)
 
         return result
     
@@ -286,7 +286,7 @@ class StreamingThread(QThread):
                     image_result.Release()
 
                 except PySpin.SpinnakerException as ex:
-                    print('Error: %s' % ex)
+                    print('Error in <acquire_and_display_images> inner loop:: %s' % ex)
                     return False
 
             #  End acquisition
@@ -297,7 +297,8 @@ class StreamingThread(QThread):
             cam.EndAcquisition()
 
         except PySpin.SpinnakerException as ex:
-            print('Error: %s' % ex)
+            print('Error in <acquire_and_display_images> outer loop:: %s' % ex)
+            raise Exception('Error in <acquire_and_display_images> outer loop: %s' % ex)
             return False
 
         return True

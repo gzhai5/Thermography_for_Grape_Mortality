@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 import cv2
+import time
 import numpy as np
 import PySpin
 import keyboard
@@ -21,7 +22,7 @@ a6700_fps = 60
 wanting_fps = 1
 
 class AcquisitionThread(QThread):
-    update_image = pyqtSignal(np.ndarray, float)
+    update_image = pyqtSignal(np.ndarray)
 
     def __init__(self, camera, file_path = './stored_data/'):
         super(AcquisitionThread, self).__init__()
@@ -32,11 +33,10 @@ class AcquisitionThread(QThread):
     def run(self):
         self.running = True
         while self.running:
-            try:
-                self.acquire_image()
-                break
-            except Exception as e:
-                print("Error acquiring image: ", e)
+            success = self.acquire_image()
+            if not success:
+                print("Acquiring image failed. Retrying...")
+                time.sleep(1)
     
     def stop(self):
         global CONTINUE_RECORDING
@@ -44,40 +44,48 @@ class AcquisitionThread(QThread):
         self.running = False
 
     def acquire_image(self):
-        # Retrieve singleton reference to system object
-        result = True
-        system = PySpin.System.GetInstance()
+        try:
+            global CONTINUE_RECORDING
+            CONTINUE_RECORDING = True
 
-        # Retrieve list of cameras from the system
-        cam_list = system.GetCameras()
+            # Retrieve singleton reference to system object
+            result = True
+            system = PySpin.System.GetInstance()
 
-        num_cameras = cam_list.GetSize()
+            # Retrieve list of cameras from the system
+            cam_list = system.GetCameras()
 
-        print('Number of cameras detected: %d' % num_cameras)
+            num_cameras = cam_list.GetSize()
 
-        # Finish if there are no cameras
-        if num_cameras == 0:
+            print('Number of cameras detected: %d' % num_cameras)
 
-            # Clear camera list before releasing system
+            # Finish if there are no cameras
+            if num_cameras == 0:
+
+                # Clear camera list before releasing system
+                cam_list.Clear()
+
+                # Release system instance
+                system.ReleaseInstance()
+
+                print('Not enough cameras!')
+                return False
+            
+            # Get 1st camera
+            cam = cam_list.GetByIndex(0)
+            print('Running example for camera %d...' % 1)
+            result &= self.run_single_camera(cam)
+            print('Camera %d example complete... \n' % 1)
+
+            del cam
             cam_list.Clear()
-
-            # Release system instance
             system.ReleaseInstance()
-
-            print('Not enough cameras!')
-            raise Exception('Not enough cameras!')
-        
-        # Get 1st camera
-        cam = cam_list.GetByIndex(0)
-        print('Running example for camera %d...' % 1)
-        result &= self.run_single_camera(cam)
-        print('Camera %d example complete... \n' % 1)
-
-        del cam
-        cam_list.Clear()
-        system.ReleaseInstance()
-        print('Camera %d is cleared and released... \n' % 1)
-        raise Exception('Camera is cleared and released... \n')
+            print('Camera %d is cleared and released... \n' % 1)
+            
+            return True
+        except Exception as e:
+            print('Error in <acquire_image>: %s' % e)
+            return False
 
     def run_single_camera(self, cam):
         try:
@@ -95,13 +103,15 @@ class AcquisitionThread(QThread):
 
             # Acquire images
             result &= self.acquire_and_display_images(cam, nodemap, nodemap_tldevice)
+            print("images acquired, with result: ", result)
 
             # Deinitialize camera
-            cam.DeInit()
+            # cam.DeInit() if result else None
+            # print("camera deinitlized")
 
         except PySpin.SpinnakerException as ex:
-            print('Error: %s' % ex)
-            result = False
+            print('Error in <run_single_camera>: %s' % ex)
+            raise Exception('Error in <run_single_camera>: %s' % ex)
 
         return result
     
@@ -231,11 +241,11 @@ class AcquisitionThread(QThread):
                 print('K2 =', K2)
 
             # Retrieve and display images
-            print('Begin acquiring images...')
+            print('Begin acquiring images...', CONTINUE_RECORDING)
 
-            # Initialize the frame counter, and set the batch size to 10 minutes
+            # Initialize the frame counter, and set the batch size to 1 minutes, which is 60 frames
             frame_counter = 0
-            batch_size = 60 * 10 
+            batch_size = 60 * 1
             batch = []
 
             while(CONTINUE_RECORDING):
@@ -264,21 +274,24 @@ class AcquisitionThread(QThread):
                         image_data = image_result.GetNDArray()
 
                         frame_counter += 1
+
                         if frame_counter == 60:
                             batch.append(image_data_dt)
                             frame_counter = 0
+                            print("batch", len(batch))
 
                         # Check if the batch size is reached
                         if len(batch) == batch_size:
                             np.save(f'{self.saved_folder_path}/apple_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.npy', np.array(batch))
                             batch = []
                             gc.collect()
+                            print("batch saved in ", self.saved_folder_path)
 
                         # Normalizing the data array to 0-255 and converting it to uint8, then displaying it
                         image_data_d = image_data
                         image_data_dt = image_data_d
                         image_data_dt = cv2.normalize(image_data_d,image_data_dt,0,255,cv2.NORM_MINMAX,dtype=cv2.CV_8U)
-                        self.update_image.emit(image_data_dt, np.mean(image_data_dt))
+                        self.update_image.emit(image_data_dt)
 
                         # if CHOSEN_IR_TYPE == IRFormatType.LINEAR_10MK:
                         #     # Transforming the data array into a temperature array, if streaming mode is set to TemperatueLinear10mK
@@ -295,10 +308,6 @@ class AcquisitionThread(QThread):
                         #     image_Radiance = (image_data - J0) / J1
                         #     image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
 
-                        # If user presses enter, close the program
-                        if keyboard.is_pressed('ENTER'):
-                            print('Program is closing...')
-                            CONTINUE_RECORDING = False
 
                     #  Release image
                     #
@@ -309,7 +318,7 @@ class AcquisitionThread(QThread):
                     image_result.Release()
 
                 except PySpin.SpinnakerException as ex:
-                    print('Error: %s' % ex)
+                    print('Error in <acquire_and_display_images> inner loop:: %s' % ex)
                     return False
 
             #  End acquisition
@@ -320,7 +329,8 @@ class AcquisitionThread(QThread):
             cam.EndAcquisition()
 
         except PySpin.SpinnakerException as ex:
-            print('Error: %s' % ex)
+            print('Error in <acquire_and_display_images> outer loop:: %s' % ex)
+            raise Exception('Error in <acquire_and_display_images> outer loop: %s' % ex)
             return False
 
         return True
