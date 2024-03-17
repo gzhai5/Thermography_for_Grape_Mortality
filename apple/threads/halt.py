@@ -10,7 +10,7 @@ class HaltingThread(QThread):
         self.running = False
 
     def run(self):
-        image_data = Image.new('RGB', (130,100), color=(255,255,255))
+        image_data = Image.new('RGB', (130,100), color=(44,44,84))
         draw = ImageDraw.Draw(image_data)
         draw.text((20,20), "No Thread Found", fill=(0,0,0))
         image_data = np.array(image_data)
