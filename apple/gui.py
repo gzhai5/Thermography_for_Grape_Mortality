@@ -15,8 +15,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 folder_path = './stored_data/'
 
 class MyApp(QWidget):
-    def __init__(self):
+    def __init__(self, mode="halt"):
         super().__init__()
+        self.mode = mode
         self.stream_thread = None
         self.acquisition_thread = None
         self.halt_thread = None
@@ -100,6 +101,19 @@ class MyApp(QWidget):
         self.setStyleSheet("QWidget { background-color: #474787; }"
                            "QPushButton { background-color: #2C2C54; color: white; font-weight: bold; }")
         logging.info('UI Initialized')
+
+        if self.mode == "stream":
+            self.streamRadio.setChecked(True)
+            self.toggle_stream()
+        elif self.mode == "acquire":
+            self.acquisitionRadio.setChecked(True)
+            self.toggle_acquisition()
+        elif self.mode == "halt":
+            self.haltRadio.setChecked(True)
+            self.toggle_halt()
+        else:
+            logging.warning(f"Invalid mode: {self.mode}")
+            exit(1)
 
     def selectSavePath(self):
         options = QFileDialog.Options()
