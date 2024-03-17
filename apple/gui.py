@@ -2,7 +2,7 @@ import logging
 import cv2
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit, QFileDialog, QRadioButton, QGroupBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit, QFileDialog, QRadioButton, QGroupBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
 from threads.stream import StreamingThread
@@ -18,9 +18,7 @@ class MyApp(QWidget):
     def __init__(self, mode="halt"):
         super().__init__()
         self.mode = mode
-        self.stream_thread = None
-        self.acquisition_thread = None
-        self.halt_thread = None
+        self.active_thread = None
         # # Initialize Matplotlib figure and canvas
         # self.figure = plt.figure()
         # self.canvas = FigureCanvas(self.figure)
@@ -50,15 +48,20 @@ class MyApp(QWidget):
         modeLayout = QVBoxLayout()
         # Radio Buttons
         self.haltRadio = QRadioButton("Halt")
-        self.haltRadio.setChecked(True)
+        self.haltRadio.setChecked(True) if (self.mode != "halt") and (self.mode != "acquire") else None
         self.haltRadio.toggled.connect(self.toggle_halt)
+        self.toggle_halt() if self.haltRadio.isChecked() else None
         self.haltRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
         self.streamRadio = QRadioButton("Stream")
         self.streamRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
+        self.streamRadio.setChecked(True) if self.mode == "stream" else None
         self.streamRadio.toggled.connect(self.toggle_stream)
+        self.toggle_stream() if self.streamRadio.isChecked() else None
         self.acquisitionRadio = QRadioButton("Acquisition")
+        self.acquisitionRadio.setChecked(True) if self.mode == "acquire" else None
         self.acquisitionRadio.toggled.connect(self.toggle_acquisition)
         self.acquisitionRadio.setStyleSheet("QRadioButton { background-color: #2C2C54; color: white; font-size: 30px; font-weight: semi-bold;}")
+        self.toggle_acquisition() if self.acquisitionRadio.isChecked() else None
         modeLayout.addWidget(self.haltRadio)
         modeLayout.addWidget(self.streamRadio)
         modeLayout.addWidget(self.acquisitionRadio)
@@ -102,19 +105,6 @@ class MyApp(QWidget):
                            "QPushButton { background-color: #2C2C54; color: white; font-weight: bold; }")
         logging.info('UI Initialized')
 
-        if self.mode == "stream":
-            self.streamRadio.setChecked(True)
-            self.toggle_stream()
-        elif self.mode == "acquire":
-            self.acquisitionRadio.setChecked(True)
-            self.toggle_acquisition()
-        elif self.mode == "halt":
-            self.haltRadio.setChecked(True)
-            self.toggle_halt()
-        else:
-            logging.warning(f"Invalid mode: {self.mode}")
-            exit(1)
-
     def selectSavePath(self):
         options = QFileDialog.Options()
         folderPath = QFileDialog.getExistingDirectory(self, "Select Directory", options=options)
@@ -126,35 +116,38 @@ class MyApp(QWidget):
 
     def toggle_stream(self):
         if self.streamRadio.isChecked():
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = StreamingThread(0)
+            self.active_thread.update_image.connect(self.update_image_display)
+            self.active_thread.start()
             logging.info('Stream mode selected')
-            self.stream_thread = StreamingThread(0)
-            self.stream_thread.update_image.connect(self.update_image_display)
-            self.stream_thread.start()
         else:
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = None
             logging.info('Stream mode deselected')
-            self.stream_thread.stop() if self.stream_thread else None
-            self.stream_thread = None
 
     def toggle_halt(self):
         if self.haltRadio.isChecked():
-            self.halt_thread = HaltingThread()
-            self.halt_thread.change_pixmap_signal.connect(self.update_image_display)
-            self.halt_thread.start()
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = HaltingThread()
+            self.active_thread.change_pixmap_signal.connect(self.update_image_display)
+            self.active_thread.start()
             logging.info("Halt mode slected")
         else:
-            self.halt_thread.stop() if self.halt_thread else None
-            self.halt_thread = None
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = None
             logging.info("Halt mode stopped")
 
     def toggle_acquisition(self):
         if self.acquisitionRadio.isChecked():
-            self.acquisition_thread = AcquisitionThread(0, file_path=folder_path)
-            self.acquisition_thread.update_image.connect(self.update_image_display)
-            self.acquisition_thread.start()
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = AcquisitionThread(0, file_path=folder_path)
+            self.active_thread.update_image.connect(self.update_image_display)
+            self.active_thread.start()
             logging.info("Acquisition Mode selected")
         else:
-            self.acquisition_thread.stop() if self.acquisition_thread else None
-            self.acquisition_thread = None
+            self.active_thread.stop() if self.active_thread else None
+            self.active_thread = None
             logging.info("Acquisition mode Stopped")
 
     def update_image_display(self, image, mean_value=None):
