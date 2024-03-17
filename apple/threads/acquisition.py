@@ -3,7 +3,6 @@ import cv2
 import time
 import numpy as np
 import PySpin
-import keyboard
 import gc
 from datetime import datetime
 from params import CHOSEN_IR_TYPE, R, A1, A2, B, F, X, B1, B2, J1, J0, Emiss, TRefl, TAtm, TAtmC, Humidity, Dist, ExtOpticsTransmission, ExtOpticsTemp
@@ -82,7 +81,7 @@ class AcquisitionThread(QThread):
             system.ReleaseInstance()
             print('Camera %d is cleared and released... \n' % 1)
             
-            return True
+            return False
         except Exception as e:
             print('Error in <acquire_image>: %s' % e)
             return False
@@ -99,7 +98,7 @@ class AcquisitionThread(QThread):
 
             # Retrieve GenICam nodemap
             nodemap = cam.GetNodeMap()
-            print("nodmap got")
+            print("nodemap got")
 
             # Acquire images
             result &= self.acquire_and_display_images(cam, nodemap, nodemap_tldevice)
@@ -111,7 +110,10 @@ class AcquisitionThread(QThread):
 
         except PySpin.SpinnakerException as ex:
             print('Error in <run_single_camera>: %s' % ex)
-            raise Exception('Error in <run_single_camera>: %s' % ex)
+            return False
+        except Exception as e:
+            print('Gereral Exception in <run_single_camera>: %s' % e)
+            return False
 
         return result
     
@@ -331,6 +333,8 @@ class AcquisitionThread(QThread):
         except PySpin.SpinnakerException as ex:
             print('Error in <acquire_and_display_images> outer loop:: %s' % ex)
             raise Exception('Error in <acquire_and_display_images> outer loop: %s' % ex)
+        except Exception as e:
+            print('Gereral Exception in <acquire_and_display_images>: %s' % e)
             return False
 
         return True

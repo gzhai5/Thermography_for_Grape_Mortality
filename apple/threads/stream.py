@@ -1,7 +1,6 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 import cv2
-from PIL import Image
-from io import BytesIO
+import time
 import numpy as np
 import PySpin
 import keyboard
@@ -28,11 +27,10 @@ class StreamingThread(QThread):
     def run(self):
         self.running = True
         while self.running:
-            try:
-                self.acquire_image()
-                break
-            except Exception as e:
-                print("Error acquiring image: ", e)
+            success = self.acquire_image()
+            if not success:
+                print("Acquiring image failed. Retrying...")
+                time.sleep(1)
     
     def stop(self):
         global CONTINUE_RECORDING
@@ -40,40 +38,44 @@ class StreamingThread(QThread):
         self.running = False
 
     def acquire_image(self):
-        # Retrieve singleton reference to system object
-        result = True
-        system = PySpin.System.GetInstance()
+        try:
+            # Retrieve singleton reference to system object
+            result = True
+            system = PySpin.System.GetInstance()
 
-        # Retrieve list of cameras from the system
-        cam_list = system.GetCameras()
+            # Retrieve list of cameras from the system
+            cam_list = system.GetCameras()
 
-        num_cameras = cam_list.GetSize()
+            num_cameras = cam_list.GetSize()
 
-        print('Number of cameras detected: %d' % num_cameras)
+            print('Number of cameras detected: %d' % num_cameras)
 
-        # Finish if there are no cameras
-        if num_cameras == 0:
+            # Finish if there are no cameras
+            if num_cameras == 0:
 
-            # Clear camera list before releasing system
+                # Clear camera list before releasing system
+                cam_list.Clear()
+
+                # Release system instance
+                system.ReleaseInstance()
+
+                print('Not enough cameras!')
+                return False
+            
+            # Get 1st camera
+            cam = cam_list.GetByIndex(0)
+            print('Running example for camera %d...' % 1)
+            result &= self.run_single_camera(cam)
+            print('Camera %d example complete... \n' % 1)
+
+            del cam
             cam_list.Clear()
-
-            # Release system instance
             system.ReleaseInstance()
-
-            print('Not enough cameras!')
-            raise Exception('Not enough cameras!')
-        
-        # Get 1st camera
-        cam = cam_list.GetByIndex(0)
-        print('Running example for camera %d...' % 1)
-        result &= self.run_single_camera(cam)
-        print('Camera %d example complete... \n' % 1)
-
-        del cam
-        cam_list.Clear()
-        system.ReleaseInstance()
-        print('Camera %d is cleared and released... \n' % 1)
-        raise Exception('Camera is cleared and released... \n')
+            print('Camera %d is cleared and released... \n' % 1)
+            return False
+        except Exception as e:
+            print('Error in <acquire_image>: %s' % e)
+            return False
 
     def run_single_camera(self, cam):
         try:
@@ -87,17 +89,22 @@ class StreamingThread(QThread):
 
             # Retrieve GenICam nodemap
             nodemap = cam.GetNodeMap()
-            print("nodmap got")
+            print("nodemap got")
 
             # Acquire images
             result &= self.acquire_and_display_images(cam, nodemap, nodemap_tldevice)
+            print("images acquired, with result: ", result)
 
             # Deinitialize camera
-            cam.DeInit()
+            # cam.DeInit() if result else None
+            # print("camera deinitlized")
 
         except PySpin.SpinnakerException as ex:
-            print('Error: %s' % ex)
-            raise Exception('Error in <run_single_camera>: %s' % ex)
+            print('Error in <run_single_camera>: %s' % ex)
+            return False
+        except Exception as e:
+            print('Gereral Exception in <run_single_camera>: %s' % e)
+            return False
 
         return result
     
@@ -272,11 +279,6 @@ class StreamingThread(QThread):
                         #     image_Radiance = (image_data - J0) / J1
                         #     image_Temp = (B / np.log(R / ((image_Radiance / Emiss / Tau) - K2) + F)) - 273.15
 
-                        # If user presses enter, close the program
-                        if keyboard.is_pressed('ENTER'):
-                            print('Program is closing...')
-                            CONTINUE_RECORDING = False
-
                     #  Release image
                     #
                     #  *** NOTES ***
@@ -298,7 +300,9 @@ class StreamingThread(QThread):
 
         except PySpin.SpinnakerException as ex:
             print('Error in <acquire_and_display_images> outer loop:: %s' % ex)
-            raise Exception('Error in <acquire_and_display_images> outer loop: %s' % ex)
+            return False
+        except Exception as e:
+            print('Gereral Exception in <acquire_and_display_images>: %s' % e)
             return False
 
         return True
