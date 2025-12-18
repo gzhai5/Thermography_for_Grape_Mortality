@@ -1,5 +1,5 @@
 # Ignore Mac system files
-.DS_store
+*DS_store
 
 # Ignore saved data
 /code/SavedData
@@ -7,3 +7,14 @@
 /code/csv_data
 *.npy
 *.cfg
+
+# python cache
+*__pycache__/
+
+# data files
+*.csv
+*.svg
+*.png
+*.json
+*.jpg
+.Rproj.user
