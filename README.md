@@ -12,8 +12,7 @@ The research is presented as **two independent but connected manuscripts**, each
 **Focus:**  
 Design and validation of an active thermography system for grape-bud viability assessment, including experimental protocols and data preprocessing.
 
-➡️ **Detailed documentation:**  
-📂 [`manuscript1_system/README.md`](manuscript1_system/README.md)
+📂 [`Detailed documentation`](system_dev/README.md)
 
 ---
 
@@ -21,8 +20,7 @@ Design and validation of an active thermography system for grape-bud viability a
 **Focus:**  
 Systematic benchmarking and analysis of machine learning and deep learning models for grape-bud mortality classification.
 
-➡️ **Detailed documentation:**  
-📂 [`manuscript2_modeling/README.md`](manuscript2_modeling/README.md)
+📂 [`Detailed documentation`](model_analysis/README.md)
 
 ---
 
