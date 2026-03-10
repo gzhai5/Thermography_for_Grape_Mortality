@@ -22,15 +22,9 @@ The active thermography system consists of a synchronized heating and thermal im
 - Custom mounting and alignment fixtures
 - Hardware triggering and synchronization
 
-📷 **System overview**
+📷 **Hardware System overview**
 
-![Hardware System](readme_files/hardware_system.png)
-
-🎥 **Data acquisition demo**
-
-<video src="readme_files/daq_demo.mov" controls width="720">
-  <a href="readme_files/daq_demo.mov">▶ Download acquisition demo (.mov)</a>
-</video>
+<img src="readme_files/hardware_system.png" width="300" alt="Hardware System">
 
 ## 💻 Software System
 
@@ -46,9 +40,7 @@ Two graphical user interfaces (GUIs) were developed to support data collection a
 - ROI placement and inspection
 - Metadata annotation and sample tracking
 
-📷 **GUI Overview**
-
-![GUI Overview](readme_files/guis.png)
+<img src="readme_files/guis.png" width="700" alt="GUIs">
 
 ---
 
@@ -77,21 +69,9 @@ Below is a qualitative comparison of thermal behavior between viable and non-via
 - **Viable bud:** smooth rise during heating, gradual decay during cooling
 - **Non-viable bud:** altered slope, delayed response, or suppressed amplitude
 
-**Viable bud**
-
-<video src="readme_files/data_sample_alive.mp4" controls width="480">
-  <a href="readme_files/data_sample_alive.mp4">▶ Download viable bud demo (.mp4)</a>
-</video>
-
-**Non-viable bud**
-
-<video src="readme_files/data_sample_dead.mp4" controls width="480">
-  <a href="readme_files/data_sample_dead.mp4">▶ Download non-viable bud demo (.mp4)</a>
-</video>
-
 📈 **Mean time-series curve comparison**
 
-![Mean Curve Comparison](readme_files/mean_curve_compare.png)
+<img src="readme_files/mean_curve_compare.png" width="300" alt="Mean Curve Comparison">
 
 ---
 
@@ -101,13 +81,13 @@ Below is a qualitative comparison of thermal behavior between viable and non-via
 - Bud-centered ROIs extracted from thermal frames
 - Fixed spatial size to ensure consistency across samples
 
-![ROI Extraction Example](readme_files/roi_extract.png)
+<img src="readme_files/roi_extract.png" width="700" alt="ROI Extraction Example">
 
 ### Temporal Normalization
 - Frame-wise normalization to control for baseline temperature variation
 - Ensures comparability across sessions and cultivars
 
-![Normalization Comparison](readme_files/normalization.png)
+<img src="readme_files/normalization.png" width="600" alt="Normalization Comparison">
 
 ### Feature Engineering
 Features extracted from heating and cooling phases include:
@@ -115,7 +95,7 @@ Features extracted from heating and cooling phases include:
 - Peak temperature
 - Temporal variability metrics
 
-![Waveform Feature Extraction](readme_files/waveform_extraction.png)
+<img src="readme_files/waveform_extraction.png" width="250" alt="Waveform Feature Extraction">
 
 ---
 
@@ -131,7 +111,7 @@ These samples are:
 - Stored in separate folders or labeled in metadata
 - **Excluded from modeling and statistical analysis**
 
-![Normal vs Abnormal Curves](readme_files/normal_vs_abnormal.png)
+<img src="readme_files/normal_vs_abnormal.png" width="600" alt="Normal vs Abnormal Curves">
 
 ---
 
@@ -146,7 +126,7 @@ To evaluate whether thermal responses differ systematically between viable and n
   - Cane and segment effects
 - Within-cultivar comparisons to isolate mortality effects
 
-![Statistical Test Results](readme_files/statistical_test_results.png)
+<img src="readme_files/statistical_test_results.png" width="300" alt="Statistical Test Results">
 
 These analyses establish the **statistical separability** of mortality states and motivate the modeling work in Manuscript II.
 
@@ -162,3 +142,4 @@ For modeling and classification analysis, see **Manuscript II**:
 ➡️ [`Manuscript II — Modeling & Analysis`](../model_analysis/README.md)
 
 ---
+
