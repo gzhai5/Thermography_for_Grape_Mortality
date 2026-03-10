@@ -23,10 +23,10 @@ The active thermography system consists of a synchronized heating and thermal im
 - Hardware triggering and synchronization
 
 📷 **System overview**
-> *(Insert system diagram / photo here)*
+> ![Hardware System](readme_files/hardware_system.png)
 
 🎥 **Data acquisition demo**
-> *(Insert short demo video showing a full acquisition cycle: heating → cooling)*
+> ![Data Acquisition Demo](readme_files/daq_demo.mov)
 
 ## 💻 Software System
 
@@ -37,14 +37,14 @@ Two graphical user interfaces (GUIs) were developed to support data collection a
 - Synchronizes thermal image acquisition
 - Ensures consistent acquisition parameters across experiments
 
-📷 *(Insert screenshot of acquisition GUI)*
-
-### 2️⃣ Monitoring & Annotation GUI
+### 2️⃣ Validation GUI
 - Real-time visualization of thermal frames
 - ROI placement and inspection
 - Metadata annotation and sample tracking
 
-📷 *(Insert screenshot of monitoring GUI)*
+📷 **GUI Overview**
+> ![Monitoring GUI](readme_files/guis.png)
+
 
 ---
 
